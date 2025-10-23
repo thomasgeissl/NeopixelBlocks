@@ -37,7 +37,7 @@ Blockly.Blocks["neopixel_set_pixel"] = {
     this.setTooltip("Set pixel color at index with RGB values");
   },
 };
-  
+
 Blockly.Blocks["neopixel_set_all_pixels"] = {
   init: function () {
     this.appendDummyInput().appendField("set all pixels");
@@ -166,7 +166,6 @@ Blockly.Blocks["neopixel_delay"] = {
   return `await setColor(${r}, ${g}, ${b});\n`;
 };
 
-
 (javascriptGenerator as any).forBlock["neopixel_show"] = function () {
   return `await show();\n`;
 };
@@ -292,11 +291,7 @@ const BlocklyEditor = () => {
           console.log(`Set pixel ${index} to RGB(${r},${g},${b})`);
           await wsQueue!.queueSend({ cmd: "setPixelColor", index, r, g, b });
         },
-        setAllPixelColor: async (
-          r: number,
-          g: number,
-          b: number
-        ) => {
+        setAllPixelColor: async (r: number, g: number, b: number) => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
           console.log(`Set all pixel to RGB(${r},${g},${b})`);
           await wsQueue!.queueSend({ cmd: "setColor", r, g, b });
@@ -381,6 +376,9 @@ const BlocklyEditor = () => {
             <category name="Math" colour="230">
               <block type="math_number"></block>
               <block type="math_arithmetic"></block>
+              <block type="math_round">
+                <field name="OP">ROUND</field>
+              </block>
             </category>
             <category name="Neopixel" colour="290">
               <block type="neopixel_set_all_pixels">
@@ -491,22 +489,26 @@ const BlocklyEditor = () => {
         <IconButton onClick={handleStop} color="error" disabled={!isRunning}>
           <Stop />
         </IconButton>
-        <Chip
-          icon={<Circle sx={{ fontSize: 12 }} />}
-          label={getStatusLabel()}
-          color={getStatusColor()}
-          size="small"
-        />
-        {getStatusLabel() === "Disconnected" && (
-          <Button
-            onClick={() => {
-              wsQueue?.updateUrl(`ws://${ip}/ws`);
-              doPing();
-            }}
-          >
-            Reconnect
-          </Button>
-        )}
+        <Box display={"flex"} alignItems="center" gap={2}>
+          <span onClick={()=>useAppStore.getState().setShowSettings(true)}>{ip}</span>
+          <Chip
+            icon={<Circle sx={{ fontSize: 12 }} />}
+            label={getStatusLabel()}
+            color={getStatusColor()}
+            size="small"
+          />
+          {getStatusLabel() === "Disconnected" && (
+            <Button
+              onClick={() => {
+                wsQueue?.updateUrl(`ws://${ip}/ws`);
+                doPing();
+              }}
+              size="small"
+            >
+              Reconnect
+            </Button>
+          )}
+        </Box>
       </Box>
       <Box
         ref={blocklyDiv}
