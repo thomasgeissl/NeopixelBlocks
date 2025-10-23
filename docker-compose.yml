@@ -1,0 +1,23 @@
+services:
+  builder:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./app:/app
+      - build_output:/app/dist
+    command: sh -c "npm ci && npm run build"
+
+  app:
+    container_name: neopixel_commander
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - build_output:/usr/share/nginx/html:ro
+    depends_on:
+      builder:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  build_output:
