@@ -11,7 +11,7 @@ services:
     container_name: neopixel_blocks
     image: nginx:alpine
     ports:
-      - "8080:80"
+      - "80:80"
     volumes:
       - build_output:/usr/share/nginx/html:ro
     depends_on:
