@@ -43,11 +43,11 @@ jobs:
             librsvg2-dev
 
       - name: Install frontend dependencies
-        working-directory: ./app
+        working-directory: app
         run: npm install
 
       - name: Build Tauri app
-        working-directory: ./app
+        working-directory: app
         run: npm run tauri build
 
       - name: Upload artifacts (Ubuntu)
