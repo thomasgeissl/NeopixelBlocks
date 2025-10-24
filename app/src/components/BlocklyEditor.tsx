@@ -490,7 +490,8 @@ const BlocklyEditor = () => {
           <Stop />
         </IconButton>
         <Box display={"flex"} alignItems="center" gap={2}>
-          <span onClick={()=>useAppStore.getState().setShowSettings(true)}>{ip}</span>
+          {ip != "" && <span onClick={()=>useAppStore.getState().setShowSettings(true)}>{ip}</span>}
+          {ip === "" && <span onClick={()=>useAppStore.getState().setShowSettings(true)}>click to set ip</span>}
           <Chip
             icon={<Circle sx={{ fontSize: 12 }} />}
             label={getStatusLabel()}
