@@ -379,6 +379,10 @@ const BlocklyEditor = () => {
               <block type="math_round">
                 <field name="OP">ROUND</field>
               </block>
+              <block type="math_random_int" id="random1" x="20" y="20">
+                <field name="FROM">0</field>
+                <field name="TO">255</field>
+              </block>
             </category>
             <category name="Neopixel" colour="290">
               <block type="neopixel_set_all_pixels">
