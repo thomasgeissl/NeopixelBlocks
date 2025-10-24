@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import Header from "./components/Header";
+// import Header from "./components/Header";
 import BlocklyEditor from "./components/BlocklyEditor";
 import useAppStore from "./stores/app";
 import Settings from "./components/Settings";
