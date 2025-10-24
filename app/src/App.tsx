@@ -13,7 +13,7 @@ function App() {
       height={"100vh"}
       width={"100vw"}
     >
-      <Header />
+      {/* <Header /> */}
       <Box flex={1}>
         {showSettings && <Settings />}
         <BlocklyEditor />

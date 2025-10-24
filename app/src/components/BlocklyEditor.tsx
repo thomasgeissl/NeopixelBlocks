@@ -3,7 +3,7 @@ import * as Blockly from "blockly";
 import { javascriptGenerator, Order } from "blockly/javascript";
 
 import "blockly/blocks";
-import { Box, IconButton, Chip, Button } from "@mui/material";
+import { Box, IconButton, Chip, Button, Typography } from "@mui/material";
 import { PlayArrow, Stop, Circle } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import WSQueue from "../WSQueue";
@@ -483,6 +483,9 @@ const BlocklyEditor = () => {
   return (
     <Box display="flex" flexDirection="column" height="100%">
       <Box display="flex" alignItems="center" gap={1}>
+        <Typography variant="h1" flex={1} padding={1} fontSize={16} color="primary.main">
+          Neopixel Blocks
+        </Typography>
         <IconButton onClick={handleRun} color="primary" disabled={isRunning}>
           <PlayArrow />
         </IconButton>
@@ -490,8 +493,16 @@ const BlocklyEditor = () => {
           <Stop />
         </IconButton>
         <Box display={"flex"} alignItems="center" gap={2}>
-          {ip != "" && <span onClick={()=>useAppStore.getState().setShowSettings(true)}>{ip}</span>}
-          {ip === "" && <span onClick={()=>useAppStore.getState().setShowSettings(true)}>click to set ip</span>}
+          {ip != "" && (
+            <span onClick={() => useAppStore.getState().setShowSettings(true)}>
+              {ip}
+            </span>
+          )}
+          {ip === "" && (
+            <span onClick={() => useAppStore.getState().setShowSettings(true)}>
+              click to set ip
+            </span>
+          )}
           <Chip
             icon={<Circle sx={{ fontSize: 12 }} />}
             label={getStatusLabel()}
