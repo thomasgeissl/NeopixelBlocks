@@ -336,7 +336,7 @@ const BlocklyEditor = () => {
         </Typography> */}
         <Tabs
           value={selectedTab}
-          onChange={(event, newValue) => setSelectedTab(newValue)}
+          onChange={(_, newValue) => setSelectedTab(newValue)}
           sx={{ marginLeft: 2 }}
         >
           <Tab label="tab 1" />

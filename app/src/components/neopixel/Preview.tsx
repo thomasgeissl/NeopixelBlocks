@@ -1,8 +1,7 @@
 import { Dialog, DialogContent, DialogTitle } from "@mui/material";
 import useAppStore from "../../stores/app";
 
-const Preview = ({ leds = [], config = "matrix" }) => {
-  const showPreview = useAppStore((state) => state.showPreview);
+const Preview = ({ leds = [] }) => {
   const setShowPreview = useAppStore((state) => state.setShowPreview);
   const gridSize = 8;
   const ledSize = 40;
