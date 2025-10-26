@@ -3,9 +3,12 @@ import { Box } from "@mui/material";
 import BlocklyEditor from "./components/BlocklyEditor";
 import useAppStore from "./stores/app";
 import Settings from "./components/Settings";
+import Footer from "./components/Footer";
+import Preview from "./components/neopixel/Preview";
 
 function App() {
   const showSettings = useAppStore((state) => state.showSettings);
+  const showPreview = useAppStore((state) => state.showPreview);
   return (
     <Box
       display={"flex"}
@@ -15,9 +18,11 @@ function App() {
     >
       {/* <Header /> */}
       <Box flex={1}>
-        {showSettings && <Settings />}
         <BlocklyEditor />
+        {showSettings && <Settings />}
+        {showPreview && <Preview />}
       </Box>
+      <Footer />
     </Box>
   );
 }

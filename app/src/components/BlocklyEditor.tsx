@@ -1,185 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import * as Blockly from "blockly";
-import { javascriptGenerator, Order } from "blockly/javascript";
-
+import Blockly from "./blockly/Blockly";
+import "./blockly/generator";
+import { setUploadMode } from "./blockly/generator";
+import { javascriptGenerator } from "blockly/javascript";
 import "blockly/blocks";
-import { Box, IconButton, Chip, Button, Typography } from "@mui/material";
-import { PlayArrow, Stop, Circle } from "@mui/icons-material";
+import toolboxXmlString from "./blockly/toolbox";
+
+import {
+  Box,
+  Chip,
+  Button,
+  Tooltip,
+  Tabs,
+  Tab,
+} from "@mui/material";
+import {
+  PlayArrow,
+  Stop,
+  Circle,
+  UploadFile,
+  SlowMotionVideo,
+} from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import WSQueue from "../WSQueue";
 
 // Initialize without connection - will be set up in useEffect
 let wsQueue: WSQueue | null = null;
-
-// Define Blockly blocks
-Blockly.Blocks["neopixel_program"] = {
-  init: function () {
-    this.appendDummyInput().appendField("Program");
-    this.appendStatementInput("SETUP").setCheck(null).appendField("Setup");
-    this.appendStatementInput("LOOP").setCheck(null).appendField("Loop");
-    this.setColour(160);
-    this.setTooltip("Main program block with setup and loop sections");
-    this.setHelpUrl("");
-  },
-};
-
-Blockly.Blocks["neopixel_set_pixel"] = {
-  init: function () {
-    this.appendDummyInput().appendField("set pixel");
-    this.appendValueInput("INDEX").setCheck("Number").appendField("index");
-    this.appendValueInput("R").setCheck("Number").appendField("R");
-    this.appendValueInput("G").setCheck("Number").appendField("G");
-    this.appendValueInput("B").setCheck("Number").appendField("B");
-    this.setInputsInline(true);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(290);
-    this.setTooltip("Set pixel color at index with RGB values");
-  },
-};
-
-Blockly.Blocks["neopixel_set_all_pixels"] = {
-  init: function () {
-    this.appendDummyInput().appendField("set all pixels");
-    this.appendValueInput("R").setCheck("Number").appendField("R");
-    this.appendValueInput("G").setCheck("Number").appendField("G");
-    this.appendValueInput("B").setCheck("Number").appendField("B");
-    this.setInputsInline(true);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(290);
-    this.setTooltip("Set color at all pixels with RGB values");
-  },
-};
-
-Blockly.Blocks["neopixel_show"] = {
-  init: function () {
-    this.appendDummyInput().appendField("show");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(290);
-    this.setTooltip("Display the LED changes");
-  },
-};
-
-Blockly.Blocks["neopixel_clear"] = {
-  init: function () {
-    this.appendDummyInput().appendField("clear");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(290);
-    this.setTooltip("Clear all LEDs");
-  },
-};
-
-Blockly.Blocks["neopixel_delay"] = {
-  init: function () {
-    this.appendValueInput("MS").setCheck("Number").appendField("delay");
-    this.appendDummyInput().appendField("ms");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(290);
-    this.setTooltip("Delay for specified milliseconds");
-  },
-};
-
-// Define code generators
-(javascriptGenerator as any).forBlock["neopixel_program"] = function (
-  block: Blockly.Block
-) {
-  const setupBlocks = block.getInputTargetBlock("SETUP");
-  const loopBlocks = block.getInputTargetBlock("LOOP");
-
-  const getNum = (block: Blockly.Block, name: string): number => {
-    const code = javascriptGenerator.valueToCode(block, name, Order.ATOMIC);
-    try {
-      return code ? eval(code) : 0;
-    } catch {
-      return 0;
-    }
-  };
-
-  const generateCmds = (block: Blockly.Block | null) => {
-    const cmds: any[] = [];
-    while (block) {
-      switch (block.type) {
-        case "neopixel_set_pixel":
-          cmds.push({
-            cmd: "setPixelColor",
-            index: getNum(block, "INDEX"),
-            r: getNum(block, "R"),
-            g: getNum(block, "G"),
-            b: getNum(block, "B"),
-          });
-          break;
-        case "neopixel_set_all_pixels":
-          cmds.push({
-            cmd: "setColor",
-            r: getNum(block, "R"),
-            g: getNum(block, "G"),
-            b: getNum(block, "B"),
-          });
-          break;
-        case "neopixel_show":
-          cmds.push({ cmd: "show" });
-          break;
-        case "neopixel_clear":
-          cmds.push({ cmd: "clear" });
-          break;
-        case "neopixel_delay":
-          cmds.push({ cmd: "delay", ms: getNum(block, "MS") });
-          break;
-        default:
-          console.warn("Unhandled block type:", block.type);
-      }
-      block = block.getNextBlock();
-    }
-    return cmds;
-  };
-
-  const setupCmds = generateCmds(setupBlocks);
-  const loopCmds = generateCmds(loopBlocks);
-
-  console.log("SETUP:", setupCmds);
-  console.log("LOOP:", loopCmds);
-
-  return [JSON.stringify({ setup: setupCmds, loop: loopCmds }), Order.ATOMIC];
-};
-
-(javascriptGenerator as any).forBlock["neopixel_set_pixel"] = function (
-  block: Blockly.Block
-) {
-  const index =
-    javascriptGenerator.valueToCode(block, "INDEX", Order.ATOMIC) || "0";
-  const r = javascriptGenerator.valueToCode(block, "R", Order.ATOMIC) || "0";
-  const g = javascriptGenerator.valueToCode(block, "G", Order.ATOMIC) || "0";
-  const b = javascriptGenerator.valueToCode(block, "B", Order.ATOMIC) || "0";
-  return `await setPixelColor(${index}, ${r}, ${g}, ${b});\n`;
-};
-
-(javascriptGenerator as any).forBlock["neopixel_set_all_pixels"] = function (
-  block: Blockly.Block
-) {
-  const r = javascriptGenerator.valueToCode(block, "R", Order.ATOMIC) || "0";
-  const g = javascriptGenerator.valueToCode(block, "G", Order.ATOMIC) || "0";
-  const b = javascriptGenerator.valueToCode(block, "B", Order.ATOMIC) || "0";
-  return `await setColor(${r}, ${g}, ${b});\n`;
-};
-
-(javascriptGenerator as any).forBlock["neopixel_show"] = function () {
-  return `await show();\n`;
-};
-
-(javascriptGenerator as any).forBlock["neopixel_clear"] = function () {
-  return `await clear();\n`;
-};
-
-(javascriptGenerator as any).forBlock["neopixel_delay"] = function (
-  block: Blockly.Block
-) {
-  const ms = javascriptGenerator.valueToCode(block, "MS", Order.ATOMIC) || "0";
-  return `await delay(${ms});\n`;
-};
 
 const BlocklyEditor = () => {
   const blocklyDiv = useRef(null);
@@ -193,6 +39,7 @@ const BlocklyEditor = () => {
 
   // Subscribe to IP changes from store
   const ip = useAppStore((state) => state.ip);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   // Perform ping and update status
   const doPing = async () => {
@@ -257,6 +104,7 @@ const BlocklyEditor = () => {
       setIsRunning(true);
 
       const code = javascriptGenerator.workspaceToCode(workspace.current!);
+      console.log(code);
 
       // Non-blocking delay that checks for stop
       const delay = (ms: number) => {
@@ -340,117 +188,54 @@ const BlocklyEditor = () => {
     }
   };
 
+  const handleUpload = async () => {
+  if (!wsQueue) {
+    console.error("WebSocket not initialized");
+    return;
+  }
+
+  try {
+    // Enable upload mode for synchronous code generation
+    setUploadMode(true);
+    
+    const code = javascriptGenerator.workspaceToCode(workspace.current!);
+    console.log("Upload code:", code);
+
+    // Send the code to the device - the code is now synchronous
+    // and can be executed directly on the device
+    await wsQueue.queueSend({ cmd: "upload", code: code });
+
+    console.log("Upload completed");
+  } catch (error: any) {
+    console.error("Upload error:", error);
+  } finally {
+    // Restore normal async mode
+    setUploadMode(false);
+  }
+};
+
+  const handlePreview = () => {
+    useAppStore.getState().setShowPreview(true);
+  };
+
   useEffect(() => {
     if (blocklyDiv.current) {
       workspace.current = Blockly.inject(blocklyDiv.current, {
-        toolbox: `
-          <xml xmlns="https://developers.google.com/blockly/xml">
-            <category name="Logic" colour="210">
-              <block type="controls_if"></block>
-              <block type="logic_compare"></block>
-              <block type="logic_operation"></block>
-              <block type="logic_boolean"></block>
-            </category>
-            <category name="Loops" colour="120">
-              <block type="controls_repeat_ext"></block>
-              <block type="controls_whileUntil"></block>
-              <block type="controls_for">
-                <field name="VAR">i</field>
-                <value name="FROM">
-                  <shadow type="math_number">
-                    <field name="NUM">0</field>
-                  </shadow>
-                </value>
-                <value name="TO">
-                  <shadow type="math_number">
-                    <field name="NUM">10</field>
-                  </shadow>
-                </value>
-                <value name="BY">
-                  <shadow type="math_number">
-                    <field name="NUM">1</field>
-                  </shadow>
-                </value>
-              </block>
-            </category>
-            <category name="Math" colour="230">
-              <block type="math_number"></block>
-              <block type="math_arithmetic"></block>
-              <block type="math_round">
-                <field name="OP">ROUND</field>
-              </block>
-              <block type="math_random_int" id="random1" x="20" y="20">
-                <field name="FROM">0</field>
-                <field name="TO">255</field>
-              </block>
-            </category>
-            <category name="Neopixel" colour="290">
-              <block type="neopixel_set_all_pixels">
-                <value name="R">
-                  <shadow type="math_number">
-                    <field name="NUM">255</field>
-                  </shadow>
-                </value>
-                <value name="G">
-                  <shadow type="math_number">
-                    <field name="NUM">0</field>
-                  </shadow>
-                </value>
-                <value name="B">
-                  <shadow type="math_number">
-                    <field name="NUM">0</field>
-                  </shadow>
-                </value>
-              </block>
-              <block type="neopixel_set_pixel">
-                <value name="INDEX">
-                  <shadow type="math_number">
-                    <field name="NUM">0</field>
-                  </shadow>
-                </value>
-                <value name="R">
-                  <shadow type="math_number">
-                    <field name="NUM">255</field>
-                  </shadow>
-                </value>
-                <value name="G">
-                  <shadow type="math_number">
-                    <field name="NUM">0</field>
-                  </shadow>
-                </value>
-                <value name="B">
-                  <shadow type="math_number">
-                    <field name="NUM">0</field>
-                  </shadow>
-                </value>
-              </block>
-              <block type="neopixel_show"></block>
-              <block type="neopixel_clear"></block>
-              <block type="neopixel_delay">
-                <value name="MS">
-                  <shadow type="math_number">
-                    <field name="NUM">1000</field>
-                  </shadow>
-                </value>
-              </block>
-            </category>
-            <category name="Variables" colour="330" custom="VARIABLE"></category>
-          </xml>
-        `,
+        toolbox: toolboxXmlString,
         grid: {
           spacing: 20,
           length: 3,
           colour: "#ccc",
           snap: true,
         },
-        zoom: {
-          controls: true,
-          wheel: true,
-          startScale: 1.0,
-          maxScale: 3,
-          minScale: 0.3,
-          scaleSpeed: 1.2,
-        },
+        // zoom: {
+        //   controls: true,
+        //   wheel: true,
+        //   startScale: 1.0,
+        //   maxScale: 3,
+        //   minScale: 0.3,
+        //   scaleSpeed: 1.2,
+        // },
         trashcan: true,
       });
     }
@@ -487,15 +272,77 @@ const BlocklyEditor = () => {
   return (
     <Box display="flex" flexDirection="column" height="100%">
       <Box display="flex" alignItems="center" gap={1}>
-        <Typography variant="h1" flex={1} padding={1} fontSize={16} color="primary.main">
+        <Box display="flex" alignItems="center" gap={1}>
+          {!isRunning && (
+            <Tooltip title="Run code">
+              <Button
+                onClick={handleRun}
+                color="primary"
+                disabled={isRunning}
+                startIcon={<PlayArrow />}
+                variant="outlined"
+              >
+                Run
+              </Button>
+            </Tooltip>
+          )}
+          {isRunning && (
+            <Tooltip title="Stop code">
+              <Button
+                onClick={handleStop}
+                color="error"
+                disabled={!isRunning}
+                startIcon={<Stop />}
+                variant="outlined"
+              >
+                Stop
+              </Button>
+            </Tooltip>
+          )}
+          {!isRunning && (
+            <Tooltip title="Preview code">
+              <Button
+                color="primary"
+                onClick={handlePreview}
+                startIcon={<SlowMotionVideo />}
+                variant="outlined"
+              >
+                Run Preview
+              </Button>
+            </Tooltip>
+          )}
+          {!isRunning && (
+            <Tooltip title="Upload code to device">
+              <Button
+                onClick={handleUpload}
+                color="primary"
+                startIcon={<UploadFile />}
+                variant="outlined"
+              >
+                Upload
+              </Button>
+            </Tooltip>
+          )}
+        </Box>
+        {/* <Typography
+          variant="h1"
+          flex={1}
+          padding={1}
+          fontSize={16}
+          color="primary.main"
+          textAlign={"center"}
+        >
           Neopixel Blocks
-        </Typography>
-        <IconButton onClick={handleRun} color="primary" disabled={isRunning}>
-          <PlayArrow />
-        </IconButton>
-        <IconButton onClick={handleStop} color="error" disabled={!isRunning}>
-          <Stop />
-        </IconButton>
+        </Typography> */}
+        <Tabs
+          value={selectedTab}
+          onChange={(event, newValue) => setSelectedTab(newValue)}
+          sx={{ marginLeft: 2 }}
+        >
+          <Tab label="tab 1" />
+          <Tab label="tab 2" />
+        </Tabs>
+        <Box flex={1} />
         <Box display={"flex"} alignItems="center" gap={2}>
           {ip != "" && (
             <span onClick={() => useAppStore.getState().setShowSettings(true)}>
