@@ -45,7 +45,7 @@ jobs:
       
       - name: Build Tauri app
         working-directory: app
-        run: npm run tauri build
+        run: npm run tauri:build
       
       - name: Upload artifacts (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
