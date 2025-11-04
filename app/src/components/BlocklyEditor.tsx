@@ -6,14 +6,7 @@ import { javascriptGenerator } from "blockly/javascript";
 import "blockly/blocks";
 import toolboxXmlString from "./blockly/toolbox";
 
-import {
-  Box,
-  Chip,
-  Button,
-  Tooltip,
-  Tabs,
-  Tab,
-} from "@mui/material";
+import { Box, Chip, Button, Tooltip } from "@mui/material";
 import {
   PlayArrow,
   Stop,
@@ -39,7 +32,8 @@ const BlocklyEditor = () => {
 
   // Subscribe to IP changes from store
   const ip = useAppStore((state) => state.ip);
-  const [selectedTab, setSelectedTab] = useState(0);
+  // const tabs = useAppStore((state) => state.tabs);
+  // const [selectedTab, setSelectedTab] = useState(0);
 
   // Perform ping and update status
   const doPing = async () => {
@@ -189,30 +183,30 @@ const BlocklyEditor = () => {
   };
 
   const handleUpload = async () => {
-  if (!wsQueue) {
-    console.error("WebSocket not initialized");
-    return;
-  }
+    if (!wsQueue) {
+      console.error("WebSocket not initialized");
+      return;
+    }
 
-  try {
-    // Enable upload mode for synchronous code generation
-    setUploadMode(true);
-    
-    const code = javascriptGenerator.workspaceToCode(workspace.current!);
-    console.log("Upload code:", code);
+    try {
+      // Enable upload mode for synchronous code generation
+      setUploadMode(true);
 
-    // Send the code to the device - the code is now synchronous
-    // and can be executed directly on the device
-    await wsQueue.queueSend({ cmd: "upload", code: code });
+      const code = javascriptGenerator.workspaceToCode(workspace.current!);
+      console.log("Upload code:", code);
 
-    console.log("Upload completed");
-  } catch (error: any) {
-    console.error("Upload error:", error);
-  } finally {
-    // Restore normal async mode
-    setUploadMode(false);
-  }
-};
+      // Send the code to the device - the code is now synchronous
+      // and can be executed directly on the device
+      await wsQueue.queueSend({ cmd: "saveJS", code: code });
+
+      console.log("Upload completed");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+    } finally {
+      // Restore normal async mode
+      setUploadMode(false);
+    }
+  };
 
   const handlePreview = () => {
     useAppStore.getState().setShowPreview(true);
@@ -299,7 +293,7 @@ const BlocklyEditor = () => {
               </Button>
             </Tooltip>
           )}
-          {!isRunning && (
+          {/* {!isRunning && (
             <Tooltip title="Preview code">
               <Button
                 color="primary"
@@ -310,7 +304,7 @@ const BlocklyEditor = () => {
                 Run Preview
               </Button>
             </Tooltip>
-          )}
+          )} */}
           {!isRunning && (
             <Tooltip title="Upload code to device">
               <Button
@@ -334,14 +328,20 @@ const BlocklyEditor = () => {
         >
           Neopixel Blocks
         </Typography> */}
-        <Tabs
+        {/* <Tabs
           value={selectedTab}
           onChange={(_, newValue) => setSelectedTab(newValue)}
           sx={{ marginLeft: 2 }}
         >
-          <Tab label="tab 1" />
-          <Tab label="tab 2" />
-        </Tabs>
+          {tabs.map((tab: any, index: number) => (
+            <Tab key={index} label={tab.name} />
+          ))}
+        </Tabs> */}
+        {/* <Box>
+          <Button variant="outlined" onClick={() => {}}>
+            new
+          </Button>
+        </Box> */}
         <Box flex={1} />
         <Box display={"flex"} alignItems="center" gap={2}>
           {ip != "" && (
@@ -362,9 +362,13 @@ const BlocklyEditor = () => {
           />
           {getStatusLabel() === "Disconnected" && (
             <Button
-              onClick={() => {
-                wsQueue?.updateUrl(`ws://${ip}/ws`);
-                doPing();
+              onClick={async () => {
+                const success = await wsQueue?.updateUrl(`ws://${ip}/ws`);
+                if (success) {
+                  doPing();
+                } else {
+                  console.log("could not reconnect");
+                }
               }}
               size="small"
             >

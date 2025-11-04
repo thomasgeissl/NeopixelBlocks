@@ -28,7 +28,7 @@ class WSQueue {
     this.maxConcurrent = maxConcurrent;
     this.commandTimeout = commandTimeout;
     this.ws = new WebSocket(url);
-    
+
     this.ws.onopen = () => {
       console.log("WebSocket opened");
       this.reconnecting = false;
@@ -38,7 +38,7 @@ class WSQueue {
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         // Handle acknowledgment
         if (data.status === "ok" && data.ack !== undefined) {
           const pending = this.pendingAcks.get(data.ack);
@@ -99,12 +99,15 @@ class WSQueue {
    */
   public queueSend(msg: JSONMessage): Promise<void> | void {
     const msgWithId = { ...msg, id: this.currentId++ };
-    
+
     // If we're below the limit, send immediately without waiting
-    if (this.pendingAcks.size < this.maxConcurrent && this.ws.readyState === WebSocket.OPEN) {
+    if (
+      this.pendingAcks.size < this.maxConcurrent &&
+      this.ws.readyState === WebSocket.OPEN
+    ) {
       return this.sendImmediate(msgWithId);
     }
-    
+
     // Otherwise, queue and wait
     return new Promise((resolve, reject) => {
       this.sendQueue.push({
@@ -256,12 +259,12 @@ class WSQueue {
    * Update the WebSocket URL and reconnect
    * Clears all pending commands and establishes a new connection
    */
-  public updateUrl(newUrl: string) {
+  public async updateUrl(newUrl: string) {
     console.log(`Updating WebSocket URL from ${this.url} to ${newUrl}`);
-    
+
     // Store new URL
     this.url = newUrl;
-    
+
     // Clear queue and pending commands
     this.clearQueue();
     this.pendingAcks.forEach((pending) => {
@@ -269,58 +272,72 @@ class WSQueue {
       pending.reject(new Error("Connection URL changed"));
     });
     this.pendingAcks.clear();
-    
+
     // Close old connection
     if (this.ws) {
       this.ws.onclose = null; // Prevent reconnection logic
       this.ws.close();
     }
-    
+
     // Create new connection
     this.reconnecting = false;
     this.ws = new WebSocket(newUrl);
-    
-    this.ws.onopen = () => {
-      console.log("WebSocket opened");
-      this.reconnecting = false;
-      this.processQueue();
-    };
+    return new Promise((resolve) => {
+      let settled = false;
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        // Handle acknowledgment
-        if (data.status === "ok" && data.ack !== undefined) {
-          const pending = this.pendingAcks.get(data.ack);
-          if (pending) {
-            if (pending.timeout) clearTimeout(pending.timeout);
-            this.pendingAcks.delete(data.ack);
-            pending.resolve();
-          }
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          console.warn("WebSocket connect timeout");
+          resolve(false);
         }
-        // Handle errors
-        else if (data.status === "error" && data.id !== undefined) {
-          const pending = this.pendingAcks.get(data.id);
-          if (pending) {
-            if (pending.timeout) clearTimeout(pending.timeout);
-            this.pendingAcks.delete(data.id);
-            pending.reject(new Error(data.error || "Unknown error"));
+      }, 5000);
+      this.ws.onopen = () => {
+        clearTimeout(timeout);
+        console.log("WebSocket opened");
+        settled = true;
+        this.reconnecting = false;
+        this.processQueue();
+        return resolve(true);
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Handle acknowledgment
+          if (data.status === "ok" && data.ack !== undefined) {
+            const pending = this.pendingAcks.get(data.ack);
+            if (pending) {
+              if (pending.timeout) clearTimeout(pending.timeout);
+              this.pendingAcks.delete(data.ack);
+              pending.resolve();
+            }
           }
+          // Handle errors
+          else if (data.status === "error" && data.id !== undefined) {
+            const pending = this.pendingAcks.get(data.id);
+            if (pending) {
+              if (pending.timeout) clearTimeout(pending.timeout);
+              this.pendingAcks.delete(data.id);
+              pending.reject(new Error(data.error || "Unknown error"));
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
         }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-      }
-    };
+      };
 
-    this.ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
+      this.ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        // return resolve(false);
+      };
 
-    this.ws.onclose = () => {
-      console.warn("WebSocket closed");
-      this.handleDisconnect();
-    };
+      this.ws.onclose = () => {
+        console.warn("WebSocket closed");
+        this.handleDisconnect();
+      };
+    });
   }
 
   /**
@@ -355,7 +372,7 @@ class WSQueue {
       };
 
       this.ws.addEventListener("message", handler);
-      
+
       // Send ping message
       try {
         this.ws.send("ping");
