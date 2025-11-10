@@ -6,13 +6,16 @@ import { javascriptGenerator } from "blockly/javascript";
 import "blockly/blocks";
 import toolboxXmlString from "./blockly/toolbox";
 
-import { Box, Chip, Button, Tooltip } from "@mui/material";
+import { Box, Chip, Button, Tooltip, Tabs, Tab, IconButton, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, ListItemButton, DialogActions } from "@mui/material";
 import {
   PlayArrow,
   Stop,
   Circle,
   UploadFile,
-  SlowMotionVideo,
+  Close,
+  Add,
+  FolderOpen,
+  Delete,
 } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import WSQueue from "../WSQueue";
@@ -27,13 +30,23 @@ const BlocklyEditor = () => {
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected" | "checking"
   >("checking");
+  const [showFileDialog, setShowFileDialog] = useState(false);
   const shouldStopRef = useRef(false);
   const pingIntervalRef = useRef<number | null>(null);
 
-  // Subscribe to IP changes from store
+  // Subscribe to store
   const ip = useAppStore((state) => state.ip);
-  // const tabs = useAppStore((state) => state.tabs);
-  // const [selectedTab, setSelectedTab] = useState(0);
+  const files = useAppStore((state) => state.files);
+  const tabs = useAppStore((state) => state.tabs);
+  const activeTabId = useAppStore((state) => state.activeTabId);
+  const getActiveFile = useAppStore((state) => state.getActiveFile);
+  const updateFile = useAppStore((state) => state.updateFile);
+  const openTab = useAppStore((state) => state.openTab);
+  const closeTab = useAppStore((state) => state.closeTab);
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const createFile = useAppStore((state) => state.createFile);
+  const getFile = useAppStore((state) => state.getFile);
+  const deleteFile = useAppStore((state) => state.deleteFile);
 
   // Perform ping and update status
   const doPing = async () => {
@@ -81,6 +94,64 @@ const BlocklyEditor = () => {
       }
     };
   }, []);
+
+  // Initialize Blockly workspace
+  useEffect(() => {
+    if (blocklyDiv.current && !workspace.current) {
+      workspace.current = Blockly.inject(blocklyDiv.current, {
+        toolbox: toolboxXmlString,
+        grid: {
+          spacing: 20,
+          length: 3,
+          colour: "#ccc",
+          snap: true,
+        },
+        trashcan: true,
+      });
+
+      // Add change listener to auto-save
+      workspace.current.addChangeListener(() => {
+        const activeFile = getActiveFile();
+        if (activeFile && workspace.current) {
+          const state = Blockly.serialization.workspaces.save(workspace.current);
+          updateFile(activeFile.id, state);
+        }
+      });
+    }
+
+    return () => {
+      if (workspace.current) {
+        workspace.current.dispose();
+        workspace.current = null;
+      }
+    };
+  }, []);
+
+  // Open first file on mount if no tabs are open
+  useEffect(() => {
+    if (tabs.length === 0 && files.length > 0) {
+      openTab(files[0].id);
+    }
+  }, [tabs.length, files.length, openTab]);
+
+  // Load active file content into workspace
+  useEffect(() => {
+    const activeFile = getActiveFile();
+    
+    if (!workspace.current || !activeFile) return;
+
+    try {
+      // Clear workspace first
+      workspace.current.clear();
+      
+      // Load content if it exists
+      if (activeFile.content) {
+        Blockly.serialization.workspaces.load(activeFile.content, workspace.current);
+      }
+    } catch (error) {
+      console.error("Error loading workspace:", error);
+    }
+  }, [activeTabId]);
 
   const handleStop = () => {
     shouldStopRef.current = true;
@@ -208,38 +279,31 @@ const BlocklyEditor = () => {
     }
   };
 
-  const handlePreview = () => {
-    useAppStore.getState().setShowPreview(true);
+  // const handlePreview = () => {
+  //   useAppStore.getState().setShowPreview(true);
+  // };
+
+  const handleNewFile = () => {
+    const fileId = createFile(`Untitled ${files.length + 1}`);
+    openTab(fileId);
   };
 
-  useEffect(() => {
-    if (blocklyDiv.current) {
-      workspace.current = Blockly.inject(blocklyDiv.current, {
-        toolbox: toolboxXmlString,
-        grid: {
-          spacing: 20,
-          length: 3,
-          colour: "#ccc",
-          snap: true,
-        },
-        // zoom: {
-        //   controls: true,
-        //   wheel: true,
-        //   startScale: 1.0,
-        //   maxScale: 3,
-        //   minScale: 0.3,
-        //   scaleSpeed: 1.2,
-        // },
-        trashcan: true,
-      });
-    }
+  const handleCloseTab = (tabId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    closeTab(tabId);
+  };
 
-    return () => {
-      if (workspace.current) {
-        workspace.current.dispose();
-      }
-    };
-  }, []);
+  const handleOpenFile = (fileId: string) => {
+    openTab(fileId);
+    setShowFileDialog(false);
+  };
+
+  const handleDeleteFile = (fileId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (confirm("Are you sure you want to delete this file?")) {
+      deleteFile(fileId);
+    }
+  };
 
   const getStatusColor = () => {
     switch (connectionStatus) {
@@ -293,18 +357,6 @@ const BlocklyEditor = () => {
               </Button>
             </Tooltip>
           )}
-          {/* {!isRunning && (
-            <Tooltip title="Preview code">
-              <Button
-                color="primary"
-                onClick={handlePreview}
-                startIcon={<SlowMotionVideo />}
-                variant="outlined"
-              >
-                Run Preview
-              </Button>
-            </Tooltip>
-          )} */}
           {!isRunning && (
             <Tooltip title="Upload code to device">
               <Button
@@ -318,30 +370,6 @@ const BlocklyEditor = () => {
             </Tooltip>
           )}
         </Box>
-        {/* <Typography
-          variant="h1"
-          flex={1}
-          padding={1}
-          fontSize={16}
-          color="primary.main"
-          textAlign={"center"}
-        >
-          Neopixel Blocks
-        </Typography> */}
-        {/* <Tabs
-          value={selectedTab}
-          onChange={(_, newValue) => setSelectedTab(newValue)}
-          sx={{ marginLeft: 2 }}
-        >
-          {tabs.map((tab: any, index: number) => (
-            <Tab key={index} label={tab.name} />
-          ))}
-        </Tabs> */}
-        {/* <Box>
-          <Button variant="outlined" onClick={() => {}}>
-            new
-          </Button>
-        </Box> */}
         <Box flex={1} />
         <Box display={"flex"} alignItems="center" gap={2}>
           {ip != "" && (
@@ -377,6 +405,88 @@ const BlocklyEditor = () => {
           )}
         </Box>
       </Box>
+      
+      {/* Tab Bar */}
+      <Box display="flex" alignItems="center" borderBottom={1} borderColor="divider">
+        <Tooltip title="Open file">
+          <IconButton onClick={() => setShowFileDialog(true)} size="small" sx={{ mr: 1 }}>
+            <FolderOpen />
+          </IconButton>
+        </Tooltip>
+        <Tabs
+          value={activeTabId || false}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          {tabs.map((tab) => {
+            const file = getFile(tab.fileId);
+            return (
+              <Tab
+                key={tab.id}
+                value={tab.id}
+                label={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <span>{file?.name || "Untitled"}</span>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleCloseTab(tab.id, e)}
+                      sx={{ padding: 0.5 }}
+                    >
+                      <Close sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                }
+              />
+            );
+          })}
+        </Tabs>
+        <Tooltip title="New file">
+          <IconButton onClick={handleNewFile} size="small" sx={{ ml: 1 }}>
+            <Add />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* File Browser Dialog */}
+      <Dialog 
+        open={showFileDialog} 
+        onClose={() => setShowFileDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Open File</DialogTitle>
+        <DialogContent>
+          <List>
+            {files.map((file) => (
+              <ListItem
+                key={file.id}
+                disablePadding
+                secondaryAction={
+                  <IconButton 
+                    edge="end" 
+                    onClick={(e) => handleDeleteFile(file.id, e)}
+                    size="small"
+                  >
+                    <Delete />
+                  </IconButton>
+                }
+              >
+                <ListItemButton onClick={() => handleOpenFile(file.id)}>
+                  <ListItemText 
+                    primary={file.name}
+                    secondary={new Date(file.updatedAt).toLocaleString()}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowFileDialog(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
       <Box
         ref={blocklyDiv}
         className="flex-1 w-full"
