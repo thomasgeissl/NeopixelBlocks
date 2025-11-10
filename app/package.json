@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
+    "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -14,7 +14,7 @@
     "tauri:android:init": "npx tauri android init",
     "tauri:android:build": "tauri android build",
     "tauri:ios:init": "npx tauri ios init",
-    "tauri:ios:build": "tauri ios build"
+    "tauri:ios:build": "npx tauri ios build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
