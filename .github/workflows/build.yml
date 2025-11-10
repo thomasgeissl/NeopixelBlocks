@@ -1,4 +1,3 @@
-
 name: Build Tauri App
 on:
   push:
@@ -6,8 +5,9 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+
 jobs:
-  build:
+  build-desktop:
     strategy:
       fail-fast: false
       matrix:
@@ -73,3 +73,91 @@ jobs:
           path: |
             app/src-tauri/target/release/bundle/dmg/*.dmg
             app/src-tauri/target/release/bundle/macos/*.app
+
+  build-android:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;25.2.9519653"
+      
+      - name: Install Rust Android targets
+        run: |
+          rustup target add aarch64-linux-android
+          rustup target add armv7-linux-androideabi
+          rustup target add i686-linux-android
+          rustup target add x86_64-linux-android
+      
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+      
+      - name: Build Android app
+        working-directory: app
+        run: npm run tauri:android:build
+        env:
+          NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.2.9519653
+      
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: |
+            app/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            app/src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install iOS targets
+        run: |
+          rustup target add aarch64-apple-ios
+          rustup target add x86_64-apple-ios
+          rustup target add aarch64-apple-ios-sim
+      
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+      
+      - name: Build iOS app
+        working-directory: app
+        run: npm run tauri:ios:build
+      
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: |
+            app/src-tauri/gen/apple/build/Build/Products/**/*.app
+            app/src-tauri/gen/apple/build/Build/Products/**/*.ipa
