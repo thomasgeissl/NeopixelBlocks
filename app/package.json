@@ -11,7 +11,9 @@
     "serve": "npm run build && npx http-serve dist -p 80",
     "tauri:dev": "npx tauri dev",
     "tauri:build": "npx tauri build",
+    "tauri:android:init": "npx tauri android init",
     "tauri:android:build": "tauri android build",
+    "tauri:ios:init": "npx tauri ios init",
     "tauri:ios:build": "tauri ios build"
   },
   "dependencies": {
