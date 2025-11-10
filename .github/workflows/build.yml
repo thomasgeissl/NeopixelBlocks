@@ -45,7 +45,7 @@ jobs:
       
       - name: Build Tauri app
         working-directory: app
-        run: npm run tauri build
+        run: npm run tauri:build
       
       - name: Upload artifacts (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -114,11 +114,11 @@ jobs:
       
       - name: Initialize Android project
         working-directory: app
-        run: npm run tauri android init
+        run: npm run tauri:android:init
       
       - name: Build Android app
         working-directory: app
-        run: npm run tauri android build
+        run: npm run tauri:android:build
         env:
           NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.2.9519653
       
@@ -156,11 +156,11 @@ jobs:
       
       - name: Initialize iOS project
         working-directory: app
-        run: npm run tauri ios init
+        run: npm run tauri:ios:init
       
       - name: Build iOS app (development)
         working-directory: app
-        run: npm run tauri ios build -- --no-sign
+        run: npm run tauri:ios:build -- --no-sign
       
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
