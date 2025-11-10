@@ -10,9 +10,9 @@
     "preview": "vite preview",
     "serve": "npm run build && npx http-serve dist -p 80",
     "tauri:dev": "npx tauri dev",
-    "tauri:build": "npx tauri build"
+    "tauri:build": "npx tauri build",
     "tauri:android:build": "tauri android build",
-"tauri:ios:build": "tauri ios build"
+    "tauri:ios:build": "tauri ios build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
