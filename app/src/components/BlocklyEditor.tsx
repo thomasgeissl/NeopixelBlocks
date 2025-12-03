@@ -18,23 +18,16 @@ import {
   Delete,
 } from "@mui/icons-material";
 import useAppStore from "../stores/app";
-import WSQueue from "../WSQueue";
 import { useTranslation } from "react-i18next";
 
-// Initialize without connection - will be set up in useEffect
-let wsQueue: WSQueue | null = null;
 
 const BlocklyEditor = () => {
   const {t} = useTranslation()
   const blocklyDiv = useRef(null);
   const workspace = useRef<Blockly.WorkspaceSvg | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connected" | "disconnected" | "checking"
-  >("checking");
   const [showFileDialog, setShowFileDialog] = useState(false);
   const shouldStopRef = useRef(false);
-  const pingIntervalRef = useRef<number | null>(null);
 
   // Subscribe to store
   const ip = useAppStore((state) => state.ip);
@@ -49,55 +42,13 @@ const BlocklyEditor = () => {
   const createFile = useAppStore((state) => state.createFile);
   const getFile = useAppStore((state) => state.getFile);
   const deleteFile = useAppStore((state) => state.deleteFile);
+  const queueSend = useAppStore((state) => state.queueSend);
+  const connectionStatus = useAppStore((state) => state.connectionStatus);
+  const reconnect = useAppStore((state) => state.reconnect);
+  const init = useAppStore((state) => state.init);
+  const doPing = useAppStore((state) => state.doPing);
 
-  // Perform ping and update status
-  const doPing = async () => {
-    if (!wsQueue) return;
-
-    setConnectionStatus("checking");
-    const success = await wsQueue.ping();
-    setConnectionStatus(success ? "connected" : "disconnected");
-
-    if (!success) {
-      console.error("Connection check failed - device may be offline");
-    }
-  };
-
-  // Initialize connection on mount and when IP changes
-  useEffect(() => {
-    const wsUrl = `ws://${ip}/ws`;
-    console.log(`Connecting to ${wsUrl}`);
-
-    // Create new connection
-    if (wsQueue) {
-      wsQueue.updateUrl(wsUrl);
-    } else {
-      wsQueue = new WSQueue(wsUrl);
-    }
-
-    // Wait a bit for connection to establish, then ping
-    const initialPingTimeout = setTimeout(() => {
-      doPing();
-    }, 500);
-
-    return () => {
-      clearTimeout(initialPingTimeout);
-    };
-  }, [ip]);
-
-  // Set up periodic ping
-  useEffect(() => {
-    // Set up interval (60000ms = 1 minute)
-    pingIntervalRef.current = window.setInterval(doPing, 60000);
-
-    return () => {
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // Initialize Blockly workspace
+   // Initialize Blockly workspace
   useEffect(() => {
     if (blocklyDiv.current && !workspace.current) {
       workspace.current = Blockly.inject(blocklyDiv.current, {
@@ -108,7 +59,7 @@ const BlocklyEditor = () => {
           colour: "#ccc",
           snap: true,
         },
-        trashcan: true,
+        // trashcan: true,
       });
 
       // Add change listener to auto-save
@@ -128,6 +79,13 @@ const BlocklyEditor = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    init();
+    setTimeout(() => {
+      doPing()
+    }, 1000)
+  }, [init, doPing]);
 
   // Open first file on mount if no tabs are open
   useEffect(() => {
@@ -161,11 +119,6 @@ const BlocklyEditor = () => {
   };
 
   const handleRun = async () => {
-    if (!wsQueue) {
-      console.error("WebSocket not initialized");
-      return;
-    }
-
     try {
       shouldStopRef.current = false;
       setIsRunning(true);
@@ -204,22 +157,22 @@ const BlocklyEditor = () => {
         ) => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
           console.log(`Set pixel ${index} to RGB(${r},${g},${b})`);
-          await wsQueue!.queueSend({ cmd: "setPixelColor", index, r, g, b });
+          await queueSend({ cmd: "setPixelColor", index, r, g, b });
         },
         setAllPixelColor: async (r: number, g: number, b: number) => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
           console.log(`Set all pixel to RGB(${r},${g},${b})`);
-          await wsQueue!.queueSend({ cmd: "setColor", r, g, b });
+          await queueSend({ cmd: "setColor", r, g, b });
         },
         clear: async () => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
           console.log("Cleared all pixels");
-          await wsQueue!.queueSend({ cmd: "clear" });
+          await queueSend({ cmd: "clear" });
         },
         show: async () => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
           console.log("Displayed pixels");
-          await wsQueue!.queueSend({ cmd: "show" });
+          await queueSend({ cmd: "show" });
         },
         delay: delay,
       };
@@ -256,10 +209,10 @@ const BlocklyEditor = () => {
   };
 
   const handleUpload = async () => {
-    if (!wsQueue) {
-      console.error("WebSocket not initialized");
-      return;
-    }
+    // if (!wsQueue) {
+    //   console.error("WebSocket not initialized");
+    //   return;
+    // }
 
     try {
       // Enable upload mode for synchronous code generation
@@ -270,7 +223,7 @@ const BlocklyEditor = () => {
 
       // Send the code to the device - the code is now synchronous
       // and can be executed directly on the device
-      await wsQueue.queueSend({ cmd: "saveJS", code: code });
+      await queueSend({ cmd: "saveJS", code: code });
 
       console.log("Upload completed");
     } catch (error: any) {
@@ -307,25 +260,14 @@ const BlocklyEditor = () => {
     }
   };
 
-  const getStatusColor = () => {
-    switch (connectionStatus) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
       case "connected":
         return "success";
       case "disconnected":
         return "error";
       case "checking":
         return "warning";
-    }
-  };
-
-  const getStatusLabel = () => {
-    switch (connectionStatus) {
-      case "connected":
-        return "Connected";
-      case "disconnected":
-        return "Disconnected";
-      case "checking":
-        return "Checking...";
     }
   };
 
@@ -338,7 +280,7 @@ const BlocklyEditor = () => {
               <Button
                 onClick={handleRun}
                 color="primary"
-                disabled={isRunning}
+                disabled={connectionStatus !== "connected" || isRunning}
                 startIcon={<PlayArrow />}
                 variant="outlined"
               >
@@ -351,7 +293,7 @@ const BlocklyEditor = () => {
               <Button
                 onClick={handleStop}
                 color="error"
-                disabled={!isRunning}
+                disabled={connectionStatus !== "connected" || isRunning}
                 startIcon={<Stop />}
                 variant="outlined"
               >
@@ -386,23 +328,16 @@ const BlocklyEditor = () => {
           )}
           <Chip
             icon={<Circle sx={{ fontSize: 12 }} />}
-            label={getStatusLabel()}
-            color={getStatusColor()}
+            label={connectionStatus}
+            color={getStatusColor(connectionStatus)}
             size="small"
           />
-          {getStatusLabel() === "Disconnected" && (
+          {connectionStatus === "disconnected" && (
             <Button
-              onClick={async () => {
-                const success = await wsQueue?.updateUrl(`ws://${ip}/ws`);
-                if (success) {
-                  doPing();
-                } else {
-                  console.log("could not reconnect");
-                }
-              }}
+              onClick={() => reconnect()}
               size="small"
             >
-              Reconnect
+              {t('reconnect')}
             </Button>
           )}
         </Box>
@@ -410,7 +345,7 @@ const BlocklyEditor = () => {
       
       {/* Tab Bar */}
       <Box display="flex" alignItems="center" borderBottom={1} borderColor="divider">
-        <Tooltip title="Open file">
+        <Tooltip title={t('open_file')}>
           <IconButton onClick={() => setShowFileDialog(true)} size="small" sx={{ mr: 1 }}>
             <FolderOpen />
           </IconButton>
@@ -443,7 +378,7 @@ const BlocklyEditor = () => {
             );
           })}
         </Tabs>
-        <Tooltip title="New file">
+        <Tooltip title={t('new_file')}>
           <IconButton onClick={handleNewFile} size="small" sx={{ ml: 1 }}>
             <Add />
           </IconButton>
@@ -485,7 +420,7 @@ const BlocklyEditor = () => {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowFileDialog(false)}>Cancel</Button>
+          <Button onClick={() => setShowFileDialog(false)}>{t('cancel')}</Button>
         </DialogActions>
       </Dialog>
 
