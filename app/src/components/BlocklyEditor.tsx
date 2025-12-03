@@ -19,11 +19,13 @@ import {
 } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import WSQueue from "../WSQueue";
+import { useTranslation } from "react-i18next";
 
 // Initialize without connection - will be set up in useEffect
 let wsQueue: WSQueue | null = null;
 
 const BlocklyEditor = () => {
+  const {t} = useTranslation()
   const blocklyDiv = useRef(null);
   const workspace = useRef<Blockly.WorkspaceSvg | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -328,7 +330,7 @@ const BlocklyEditor = () => {
   };
 
   return (
-    <Box display="flex" flexDirection="column" height="100%">
+    <Box flex={1} display="flex" flexDirection="column">
       <Box display="flex" alignItems="center" gap={1}>
         <Box display="flex" alignItems="center" gap={1}>
           {!isRunning && (
@@ -340,7 +342,7 @@ const BlocklyEditor = () => {
                 startIcon={<PlayArrow />}
                 variant="outlined"
               >
-                Run
+                {t('run')}
               </Button>
             </Tooltip>
           )}
@@ -353,7 +355,7 @@ const BlocklyEditor = () => {
                 startIcon={<Stop />}
                 variant="outlined"
               >
-                Stop
+                {t('stop')}
               </Button>
             </Tooltip>
           )}
@@ -365,7 +367,7 @@ const BlocklyEditor = () => {
                 startIcon={<UploadFile />}
                 variant="outlined"
               >
-                Upload
+                {t('upload')}
               </Button>
             </Tooltip>
           )}
@@ -489,8 +491,8 @@ const BlocklyEditor = () => {
 
       <Box
         ref={blocklyDiv}
-        className="flex-1 w-full"
-        style={{ height: "800px" }}
+        flex={1}
+        style={{ minHeight: 0 }}
       />
     </Box>
   );

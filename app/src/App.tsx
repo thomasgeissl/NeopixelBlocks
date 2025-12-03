@@ -17,7 +17,7 @@ function App() {
       width={"100vw"}
     >
       {/* <Header /> */}
-      <Box flex={1}>
+      <Box flex={1} display={"flex"} flexDirection={"column"}>
         <BlocklyEditor />
         {showSettings && <Settings />}
         {showPreview && <Preview />}

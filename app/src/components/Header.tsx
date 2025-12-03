@@ -9,8 +9,8 @@ import useAppStore from "../stores/app";
 import { IconButton } from "@mui/material";
 
 const Header: React.FC = () => {
-    const showSettings = useAppStore((state) => state.showSettings);
-    const toggleShowSettings = useAppStore((state) => state.toggleShowSettings);
+  const showSettings = useAppStore((state) => state.showSettings);
+  const toggleShowSettings = useAppStore((state) => state.toggleShowSettings);
   return (
     <AppBar position="static" color="primary" elevation={1}>
       <Toolbar>
@@ -28,9 +28,12 @@ const Header: React.FC = () => {
         </Box>
         <Box flex={1}></Box>
         <Box>
-            <IconButton onClick={toggleShowSettings} color={showSettings ? "primary" : "inherit"}>
-              <Settings />
-            </IconButton>
+          <IconButton
+            onClick={toggleShowSettings}
+            color={showSettings ? "primary" : "inherit"}
+          >
+            <Settings />
+          </IconButton>
         </Box>
       </Toolbar>
     </AppBar>

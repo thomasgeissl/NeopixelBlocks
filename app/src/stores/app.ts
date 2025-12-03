@@ -23,6 +23,7 @@ export type AppState = {
   showSettings: boolean;
   showPreview: boolean;
   isExecuting: boolean;
+  isRunning: boolean;
   files: File[];
   tabs: Tab[];
   activeTabId: string | null;
@@ -33,6 +34,10 @@ export type AppState = {
   toggleShowSettings: () => void;
   setIsExecuting: (executing: boolean) => void;
   toggleIsExecuting: () => void;
+  
+  // Run/Stop control
+  run: () => void;
+  stop: () => void;
   
   // File management
   createFile: (name: string, initialContent?: any) => string; // Returns file ID
@@ -58,6 +63,7 @@ const useAppStore = create<AppState>()(
         showSettings: false,
         showPreview: false,
         isExecuting: false,
+        isRunning: false,
         files: [
           { 
             id: uuidv4(), 
@@ -76,6 +82,10 @@ const useAppStore = create<AppState>()(
         toggleShowSettings: () => set({ showSettings: !get().showSettings }),
         setIsExecuting: (executing) => set({ isExecuting: executing }),
         toggleIsExecuting: () => set({ isExecuting: !get().isExecuting }),
+        
+        // Run/Stop methods
+        run: () => set({ isRunning: true }),
+        stop: () => set({ isRunning: false }),
         
         // File management methods
         createFile: (name, initialContent = null) => {
