@@ -209,11 +209,6 @@ const BlocklyEditor = () => {
   };
 
   const handleUpload = async () => {
-    // if (!wsQueue) {
-    //   console.error("WebSocket not initialized");
-    //   return;
-    // }
-
     try {
       // Enable upload mode for synchronous code generation
       setUploadMode(true);
@@ -233,10 +228,6 @@ const BlocklyEditor = () => {
       setUploadMode(false);
     }
   };
-
-  // const handlePreview = () => {
-  //   useAppStore.getState().setShowPreview(true);
-  // };
 
   const handleNewFile = () => {
     const fileId = createFile(`Untitled ${files.length + 1}`);
