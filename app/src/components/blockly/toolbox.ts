@@ -88,6 +88,7 @@ const toolboxXmlString = `<xml xmlns="https://developers.google.com/blockly/xml"
                 </value>
               </block>
             </category>
+            <category name="Functions" colour="290" custom="PROCEDURE"></category>
             <category name="Variables" colour="330" custom="VARIABLE"></category>
           </xml>
         `;
