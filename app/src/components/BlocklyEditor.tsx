@@ -284,7 +284,7 @@ const BlocklyEditor = () => {
               <Button
                 onClick={handleStop}
                 color="error"
-                disabled={connectionStatus !== "connected" || isRunning}
+                disabled={connectionStatus !== "connected" }
                 startIcon={<Stop />}
                 variant="outlined"
               >
