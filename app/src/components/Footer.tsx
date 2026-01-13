@@ -1,7 +1,7 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
-import { Button, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
