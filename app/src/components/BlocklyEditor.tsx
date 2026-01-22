@@ -6,7 +6,25 @@ import { javascriptGenerator } from "blockly/javascript";
 import "blockly/blocks";
 import toolboxXmlString from "./blockly/toolbox";
 
-import { Box, Chip, Button, Tooltip, Tabs, Tab, IconButton, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, ListItemButton, DialogActions } from "@mui/material";
+import {
+  Box,
+  Chip,
+  Button,
+  Tooltip,
+  Tabs,
+  Tab,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  DialogActions,
+  MenuItem,
+  Menu,
+} from "@mui/material";
 import {
   PlayArrow,
   Stop,
@@ -19,19 +37,27 @@ import {
 } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import { useTranslation } from "react-i18next";
-
+import { downloadJSON } from "../utils/download";
+import ExamplesChooser from "./ExampleChooser";
 
 const BlocklyEditor = () => {
-  const {t} = useTranslation()
+  const { t } = useTranslation();
   const blocklyDiv = useRef(null);
   const workspace = useRef<Blockly.WorkspaceSvg | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [showFileDialog, setShowFileDialog] = useState(false);
   const shouldStopRef = useRef(false);
+  const [tabMenu, setTabMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    tabId: string;
+  } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Subscribe to store
   const ip = useAppStore((state) => state.ip);
   const files = useAppStore((state) => state.files);
+  const exportFile = useAppStore((state) => state.exportFile);
   const tabs = useAppStore((state) => state.tabs);
   const activeTabId = useAppStore((state) => state.activeTabId);
   const getActiveFile = useAppStore((state) => state.getActiveFile);
@@ -48,7 +74,7 @@ const BlocklyEditor = () => {
   const init = useAppStore((state) => state.init);
   const doPing = useAppStore((state) => state.doPing);
 
-   // Initialize Blockly workspace
+  // Initialize Blockly workspace
   useEffect(() => {
     if (blocklyDiv.current && !workspace.current) {
       workspace.current = Blockly.inject(blocklyDiv.current, {
@@ -66,7 +92,9 @@ const BlocklyEditor = () => {
       workspace.current.addChangeListener(() => {
         const activeFile = getActiveFile();
         if (activeFile && workspace.current) {
-          const state = Blockly.serialization.workspaces.save(workspace.current);
+          const state = Blockly.serialization.workspaces.save(
+            workspace.current,
+          );
           updateFile(activeFile.id, state);
         }
       });
@@ -83,8 +111,8 @@ const BlocklyEditor = () => {
   useEffect(() => {
     init();
     setTimeout(() => {
-      doPing()
-    }, 1000)
+      doPing();
+    }, 1000);
   }, [init, doPing]);
 
   // Open first file on mount if no tabs are open
@@ -94,24 +122,26 @@ const BlocklyEditor = () => {
     }
   }, [tabs.length, files.length, openTab]);
 
-  // Load active file content into workspace
   useEffect(() => {
     const activeFile = getActiveFile();
-    
     if (!workspace.current || !activeFile) return;
 
     try {
       // Clear workspace first
       workspace.current.clear();
-      
+
       // Load content if it exists
       if (activeFile.content) {
-        Blockly.serialization.workspaces.load(activeFile.content, workspace.current);
+        console.log("Loading content into workspace:", activeFile.name);
+        Blockly.serialization.workspaces.load(
+          activeFile.content,
+          workspace.current,
+        );
       }
     } catch (error) {
       console.error("Error loading workspace:", error);
     }
-  }, [activeTabId]);
+  }, [getActiveFile]);
 
   const handleStop = () => {
     shouldStopRef.current = true;
@@ -153,7 +183,7 @@ const BlocklyEditor = () => {
           index: number,
           r: number,
           g: number,
-          b: number
+          b: number,
         ) => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
           console.log(`Set pixel ${index} to RGB(${r},${g},${b})`);
@@ -187,13 +217,13 @@ const BlocklyEditor = () => {
         "clear",
         "show",
         "delay",
-        `return ${asyncCode}`
+        `return ${asyncCode}`,
       )(
         mockFunctions.setPixelColor,
         mockFunctions.setAllPixelColor,
         mockFunctions.clear,
         mockFunctions.show,
-        mockFunctions.delay
+        mockFunctions.delay,
       );
 
       console.log("Execution completed");
@@ -251,6 +281,45 @@ const BlocklyEditor = () => {
     }
   };
 
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      console.warn("Only JSON files are supported");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // Use filename (without .json) as file name in store
+      const fileName = file.name.replace(/\.json$/i, "");
+      const fileId = useAppStore.getState().importFile({
+        name: fileName,
+        content: data.content ?? data,
+      });
+
+      console.log("Imported file:", fileName, fileId);
+    } catch (err) {
+      console.error("Failed to import JSON:", err);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "connected":
@@ -263,7 +332,41 @@ const BlocklyEditor = () => {
   };
 
   return (
-    <Box flex={1} display="flex" flexDirection="column">
+    <Box
+      flex={1}
+      display="flex"
+      flexDirection="column"
+      onDragOver={(e) => {
+        e.preventDefault();
+        handleDragOver(e);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        handleDrop(e);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        handleDragLeave(e);
+      }}
+    >
+      {isDragOver && (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            bgcolor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            fontSize: "1.5rem",
+            pointerEvents: "none", // allow drop
+          }}
+        >
+          Drop JSON file to import
+        </Box>
+      )}
       <Box display="flex" alignItems="center" gap={1}>
         <Box display="flex" alignItems="center" gap={1}>
           {!isRunning && (
@@ -275,7 +378,7 @@ const BlocklyEditor = () => {
                 startIcon={<PlayArrow />}
                 variant="outlined"
               >
-                {t('run')}
+                {t("run")}
               </Button>
             </Tooltip>
           )}
@@ -284,11 +387,11 @@ const BlocklyEditor = () => {
               <Button
                 onClick={handleStop}
                 color="error"
-                disabled={connectionStatus !== "connected" }
+                disabled={connectionStatus !== "connected"}
                 startIcon={<Stop />}
                 variant="outlined"
               >
-                {t('stop')}
+                {t("stop")}
               </Button>
             </Tooltip>
           )}
@@ -300,7 +403,7 @@ const BlocklyEditor = () => {
                 startIcon={<UploadFile />}
                 variant="outlined"
               >
-                {t('upload')}
+                {t("upload")}
               </Button>
             </Tooltip>
           )}
@@ -324,20 +427,26 @@ const BlocklyEditor = () => {
             size="small"
           />
           {connectionStatus === "disconnected" && (
-            <Button
-              onClick={() => reconnect()}
-              size="small"
-            >
-              {t('reconnect')}
+            <Button onClick={() => reconnect()} size="small">
+              {t("reconnect")}
             </Button>
           )}
         </Box>
       </Box>
-      
+
       {/* Tab Bar */}
-      <Box display="flex" alignItems="center" borderBottom={1} borderColor="divider">
-        <Tooltip title={t('open_file')}>
-          <IconButton onClick={() => setShowFileDialog(true)} size="small" sx={{ mr: 1 }}>
+      <Box
+        display="flex"
+        alignItems="center"
+        borderBottom={1}
+        borderColor="divider"
+      >
+        <Tooltip title={t("open_file")}>
+          <IconButton
+            onClick={() => setShowFileDialog(true)}
+            size="small"
+            sx={{ mr: 1 }}
+          >
             <FolderOpen />
           </IconButton>
         </Tooltip>
@@ -354,7 +463,19 @@ const BlocklyEditor = () => {
                 key={tab.id}
                 value={tab.id}
                 label={
-                  <Box display="flex" alignItems="center" gap={1}>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={1}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setTabMenu({
+                        mouseX: e.clientX + 2,
+                        mouseY: e.clientY - 6,
+                        tabId: tab.id,
+                      });
+                    }}
+                  >
                     <span>{file?.name || "Untitled"}</span>
                     <IconButton
                       size="small"
@@ -369,16 +490,45 @@ const BlocklyEditor = () => {
             );
           })}
         </Tabs>
-        <Tooltip title={t('new_file')}>
+        <Tooltip title={t("new_file")}>
           <IconButton onClick={handleNewFile} size="small" sx={{ ml: 1 }}>
             <Add />
           </IconButton>
         </Tooltip>
       </Box>
+      <Menu
+        open={!!tabMenu}
+        onClose={() => setTabMenu(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          tabMenu ? { top: tabMenu.mouseY, left: tabMenu.mouseX } : undefined
+        }
+      >
+        <MenuItem
+          onClick={() => {
+            const data = exportFile(tabMenu!.tabId);
+            if (data) {
+              downloadJSON(data, `${data.name}.json`);
+            }
+            setTabMenu(null);
+          }}
+        >
+          Export
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            closeTab(tabMenu!.tabId);
+            setTabMenu(null);
+          }}
+        >
+          Close
+        </MenuItem>
+      </Menu>
 
       {/* File Browser Dialog */}
-      <Dialog 
-        open={showFileDialog} 
+      <Dialog
+        open={showFileDialog}
         onClose={() => setShowFileDialog(false)}
         maxWidth="sm"
         fullWidth
@@ -391,8 +541,8 @@ const BlocklyEditor = () => {
                 key={file.id}
                 disablePadding
                 secondaryAction={
-                  <IconButton 
-                    edge="end" 
+                  <IconButton
+                    edge="end"
                     onClick={(e) => handleDeleteFile(file.id, e)}
                     size="small"
                   >
@@ -401,7 +551,7 @@ const BlocklyEditor = () => {
                 }
               >
                 <ListItemButton onClick={() => handleOpenFile(file.id)}>
-                  <ListItemText 
+                  <ListItemText
                     primary={file.name}
                     secondary={new Date(file.updatedAt).toLocaleString()}
                   />
@@ -409,17 +559,17 @@ const BlocklyEditor = () => {
               </ListItem>
             ))}
           </List>
+
+          <ExamplesChooser />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowFileDialog(false)}>{t('cancel')}</Button>
+          <Button onClick={() => setShowFileDialog(false)}>
+            {t("cancel")}
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Box
-        ref={blocklyDiv}
-        flex={1}
-        style={{ minHeight: 0 }}
-      />
+      <Box ref={blocklyDiv} flex={1} style={{ minHeight: 0 }} />
     </Box>
   );
 };

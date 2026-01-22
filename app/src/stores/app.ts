@@ -2,6 +2,9 @@ import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import WSQueue from "../WSQueue";
+import type { FileExport } from "./fileExport";
+
+import chase from "./examples/chase.json";
 
 let wsQueue: WSQueue | null = null;
 
@@ -28,6 +31,7 @@ export type AppState = {
   isExecuting: boolean;
   isRunning: boolean;
   files: File[];
+  examples: File[];
   tabs: Tab[];
   activeTabId: string | null;
   connectionStatus: "connected" | "disconnected" | "checking" | "unknown";
@@ -55,6 +59,10 @@ export type AppState = {
   updateFile: (fileId: string, content: any) => void;
   renameFile: (fileId: string, newName: string) => void;
   getFile: (fileId: string) => File | undefined;
+  exportFile: (fileId: string) => FileExport | null;
+
+  loadExample: (exampleId: string) => string; // returns new file ID
+  getExample: (exampleId: string) => File | undefined;
 
   // Tab management
   openTab: (fileId: string) => void; // Opens file in new tab or focuses existing
@@ -63,6 +71,8 @@ export type AppState = {
   getActiveTab: () => Tab | undefined;
   getActiveFile: () => File | undefined;
   reorderTabs: (startIndex: number, endIndex: number) => void;
+  exportActiveFile: () => FileExport | null;
+  importFile: (data: FileExport, options?: { open?: boolean }) => string;
 };
 
 const useAppStore = create<AppState>()(
@@ -83,13 +93,19 @@ const useAppStore = create<AppState>()(
             updatedAt: Date.now(),
           },
         ],
+        examples: [
+          {
+            ...chase,
+            id: uuidv4(),
+          },
+        ],
         tabs: [],
         activeTabId: null,
         connectionStatus: "unknown",
 
         init: () => {
           const ip = get().ip;
-          if(ip){
+          if (ip) {
             wsQueue = new WSQueue(`ws://${ip}/ws`);
             get().doPing();
           }
@@ -103,7 +119,7 @@ const useAppStore = create<AppState>()(
           set({ pingIntervalId });
         },
         setIp: (ip) => {
-          set({ ip })
+          set({ ip });
           get().reconnect();
         },
         setShowSettings: (show) => set({ showSettings: show }),
@@ -231,6 +247,32 @@ const useAppStore = create<AppState>()(
         getFile: (fileId) => {
           return get().files.find((file) => file.id === fileId);
         },
+        exportFile: (tabId: string) => {
+          const { tabs, files } = get();
+          const tab = tabs.find((t) => t.id === tabId);
+          if (!tab) return null;
+
+          const file = files.find((f) => f.id === tab.fileId);
+          return file ?? null;
+        },
+        loadExample: (exampleId: string) => {
+          const example = get().examples.find((e) => e.id === exampleId);
+          if (!example) return "";
+
+          const clonedContent = structuredClone(example.content);
+
+          // Create the file with content already set
+          const newFileId = get().createFile(example.name, clonedContent);
+
+          // Open the new tab
+          get().openTab(newFileId);
+
+          return newFileId;
+        },
+
+        getExample: (exampleId: string) => {
+          return get().examples.find((e) => e.id === exampleId);
+        },
 
         // Tab management methods
         openTab: (fileId) => {
@@ -319,14 +361,43 @@ const useAppStore = create<AppState>()(
           newTabs.splice(endIndex, 0, removed);
           set({ tabs: newTabs });
         },
+        exportActiveFile: () => {
+          const file = get().getActiveFile();
+          if (!file) return null;
+
+          return {
+            name: file.name,
+            content: file.content,
+          };
+        },
+        importFile: (data, options = { open: true }) => {
+          const fileId = uuidv4();
+          const now = Date.now();
+
+          const newFile: File = {
+            id: fileId,
+            name: data.name,
+            content: structuredClone(data.content),
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          set({ files: [...get().files, newFile] });
+
+          if (options.open) {
+            get().openTab(fileId);
+          }
+
+          return fileId;
+        },
       }),
       {
         name: "app-storage",
         version: 4, // Increment version due to schema change
-      }
+      },
     ),
-    { name: "useAppStore" }
-  )
+    { name: "useAppStore" },
+  ),
 );
 
 export default useAppStore;

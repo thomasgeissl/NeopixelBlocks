@@ -1,0 +1,208 @@
+{
+  "id": "5e071667-c5e6-4e1a-969f-9601aef3d466",
+  "name": "Chase",
+  "content": {
+    "blocks": {
+      "languageVersion": 0,
+      "blocks": [
+        {
+          "type": "variables_set",
+          "id": "+lqV?`?`8j8Zot/QDmSr",
+          "x": 30,
+          "y": -10,
+          "fields": {
+            "VAR": {
+              "id": "{)onfY(O3Z_:1=7m/$a@"
+            }
+          },
+          "inputs": {
+            "VALUE": {
+              "block": {
+                "type": "math_number",
+                "id": "0Poj}Xb7J6e[~`~h^HZk",
+                "fields": {
+                  "NUM": 64
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "neopixel_clear",
+          "id": "|{.V%UMbPTC5$6Z@kZM0",
+          "x": 70,
+          "y": 90,
+          "next": {
+            "block": {
+              "type": "neopixel_show",
+              "id": "=KOT.Q_HO}jQ.OI1veC/",
+              "next": {
+                "block": {
+                  "type": "controls_for",
+                  "id": "wDTz[-DSzBh}1$+[13~Q",
+                  "fields": {
+                    "VAR": {
+                      "id": "]./dP=;,EVVJtgUx7g[;"
+                    }
+                  },
+                  "inputs": {
+                    "FROM": {
+                      "shadow": {
+                        "type": "math_number",
+                        "id": "vlUT9zP({~esBBWTpxVx",
+                        "fields": {
+                          "NUM": 0
+                        }
+                      }
+                    },
+                    "TO": {
+                      "shadow": {
+                        "type": "math_number",
+                        "id": "=F~[LTUM}kLOsNkK-#1!",
+                        "fields": {
+                          "NUM": 10
+                        }
+                      },
+                      "block": {
+                        "type": "math_arithmetic",
+                        "id": "84^i0#Co(x,h)/+xfGe[",
+                        "fields": {
+                          "OP": "MINUS"
+                        },
+                        "inputs": {
+                          "A": {
+                            "block": {
+                              "type": "variables_get",
+                              "id": "0LH6aH{o!a8CUe:4$]eF",
+                              "fields": {
+                                "VAR": {
+                                  "id": "{)onfY(O3Z_:1=7m/$a@"
+                                }
+                              }
+                            }
+                          },
+                          "B": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "?4Wa+ga7XlSeM.%)~)B0",
+                              "fields": {
+                                "NUM": -1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "BY": {
+                      "shadow": {
+                        "type": "math_number",
+                        "id": "(bZ~0~h|o0vBP=V4=C:8",
+                        "fields": {
+                          "NUM": 1
+                        }
+                      }
+                    },
+                    "DO": {
+                      "block": {
+                        "type": "neopixel_clear",
+                        "id": "tr@M#Y_{tP0;VG3Yr8Jl",
+                        "next": {
+                          "block": {
+                            "type": "neopixel_set_pixel",
+                            "id": "(:fp!YUk[%~|`MQ=CuaQ",
+                            "inputs": {
+                              "INDEX": {
+                                "shadow": {
+                                  "type": "math_number",
+                                  "id": ")bPu9y(f!~v|wayS_Qd#",
+                                  "fields": {
+                                    "NUM": 0
+                                  }
+                                },
+                                "block": {
+                                  "type": "variables_get",
+                                  "id": "q7Fee(5q,pL#soUt~%[4",
+                                  "fields": {
+                                    "VAR": {
+                                      "id": "]./dP=;,EVVJtgUx7g[;"
+                                    }
+                                  }
+                                }
+                              },
+                              "R": {
+                                "shadow": {
+                                  "type": "math_number",
+                                  "id": "QJ}Fw,;?EC|R-)wd2OKQ",
+                                  "fields": {
+                                    "NUM": 255
+                                  }
+                                }
+                              },
+                              "G": {
+                                "shadow": {
+                                  "type": "math_number",
+                                  "id": "D?S@}(1Ug*nBtd?,,6rX",
+                                  "fields": {
+                                    "NUM": 0
+                                  }
+                                }
+                              },
+                              "B": {
+                                "shadow": {
+                                  "type": "math_number",
+                                  "id": "9+8uRPwyR|IK+y)lJS/!",
+                                  "fields": {
+                                    "NUM": 0
+                                  }
+                                }
+                              }
+                            },
+                            "next": {
+                              "block": {
+                                "type": "neopixel_show",
+                                "id": "ngj791[mZW3S=0U/75mW",
+                                "next": {
+                                  "block": {
+                                    "type": "neopixel_delay",
+                                    "id": "U)C{]Hme+{yegK)rpET8",
+                                    "inputs": {
+                                      "MS": {
+                                        "shadow": {
+                                          "type": "math_number",
+                                          "id": "M(:(7*}[wl]:=20WQ)32",
+                                          "fields": {
+                                            "NUM": 50
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "variables": [
+      {
+        "name": "led_count",
+        "id": "{)onfY(O3Z_:1=7m/$a@"
+      },
+      {
+        "name": "i",
+        "id": "]./dP=;,EVVJtgUx7g[;"
+      }
+    ]
+  },
+  "createdAt": 1769009245131,
+  "updatedAt": 1769026327026
+}
