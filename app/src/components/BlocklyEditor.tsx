@@ -11,34 +11,18 @@ import {
   Chip,
   Button,
   Tooltip,
-  Tabs,
-  Tab,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemButton,
-  DialogActions,
-  MenuItem,
-  Menu,
 } from "@mui/material";
 import {
   PlayArrow,
   Stop,
   Circle,
   UploadFile,
-  Close,
-  Add,
-  FolderOpen,
-  Delete,
 } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import { useTranslation } from "react-i18next";
 import { downloadJSON } from "../utils/download";
-import ExamplesChooser from "./ExampleChooser";
+import FileBrowserDialog from "./FileBrowserDialog";
+import EditorTabBar from "./EditorTabBar";
 
 const BlocklyEditor = () => {
   const { t } = useTranslation();
@@ -47,11 +31,6 @@ const BlocklyEditor = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [showFileDialog, setShowFileDialog] = useState(false);
   const shouldStopRef = useRef(false);
-  const [tabMenu, setTabMenu] = useState<{
-    mouseX: number;
-    mouseY: number;
-    tabId: string;
-  } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Subscribe to store
@@ -141,7 +120,7 @@ const BlocklyEditor = () => {
     } catch (error) {
       console.error("Error loading workspace:", error);
     }
-  }, [getActiveFile]);
+  }, [activeTabId]); // Changed from [getActiveFile] to [activeTabId]
 
   const handleStop = () => {
     shouldStopRef.current = true;
@@ -264,10 +243,6 @@ const BlocklyEditor = () => {
     openTab(fileId);
   };
 
-  const handleCloseTab = (tabId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    closeTab(tabId);
-  };
 
   const handleOpenFile = (fileId: string) => {
     openTab(fileId);
@@ -441,133 +416,30 @@ const BlocklyEditor = () => {
         borderBottom={1}
         borderColor="divider"
       >
-        <Tooltip title={t("open_file")}>
-          <IconButton
-            onClick={() => setShowFileDialog(true)}
-            size="small"
-            sx={{ mr: 1 }}
-          >
-            <FolderOpen />
-          </IconButton>
-        </Tooltip>
-        <Tabs
-          value={activeTabId || false}
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          {tabs.map((tab) => {
-            const file = getFile(tab.fileId);
-            return (
-              <Tab
-                key={tab.id}
-                value={tab.id}
-                label={
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={1}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setTabMenu({
-                        mouseX: e.clientX + 2,
-                        mouseY: e.clientY - 6,
-                        tabId: tab.id,
-                      });
-                    }}
-                  >
-                    <span>{file?.name || "Untitled"}</span>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleCloseTab(tab.id, e)}
-                      sx={{ padding: 0.5 }}
-                    >
-                      <Close sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Box>
-                }
-              />
-            );
-          })}
-        </Tabs>
-        <Tooltip title={t("new_file")}>
-          <IconButton onClick={handleNewFile} size="small" sx={{ ml: 1 }}>
-            <Add />
-          </IconButton>
-        </Tooltip>
-      </Box>
-      <Menu
-        open={!!tabMenu}
-        onClose={() => setTabMenu(null)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          tabMenu ? { top: tabMenu.mouseY, left: tabMenu.mouseX } : undefined
-        }
-      >
-        <MenuItem
-          onClick={() => {
-            const data = exportFile(tabMenu!.tabId);
+        <EditorTabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          getFile={getFile}
+          onTabChange={setActiveTab}
+          onCloseTab={closeTab}
+          onNewFile={handleNewFile}
+          onOpenFileDialog={() => setShowFileDialog(true)}
+          onExportTab={(tabId) => {
+            const data = exportFile(tabId);
             if (data) {
               downloadJSON(data, `${data.name}.json`);
             }
-            setTabMenu(null);
           }}
-        >
-          Export
-        </MenuItem>
+        />
+      </Box>
 
-        <MenuItem
-          onClick={() => {
-            closeTab(tabMenu!.tabId);
-            setTabMenu(null);
-          }}
-        >
-          Close
-        </MenuItem>
-      </Menu>
-
-      {/* File Browser Dialog */}
-      <Dialog
+      <FileBrowserDialog
         open={showFileDialog}
+        files={files}
         onClose={() => setShowFileDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Open File</DialogTitle>
-        <DialogContent>
-          <List>
-            {files.map((file) => (
-              <ListItem
-                key={file.id}
-                disablePadding
-                secondaryAction={
-                  <IconButton
-                    edge="end"
-                    onClick={(e) => handleDeleteFile(file.id, e)}
-                    size="small"
-                  >
-                    <Delete />
-                  </IconButton>
-                }
-              >
-                <ListItemButton onClick={() => handleOpenFile(file.id)}>
-                  <ListItemText
-                    primary={file.name}
-                    secondary={new Date(file.updatedAt).toLocaleString()}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-
-          <ExamplesChooser />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowFileDialog(false)}>
-            {t("cancel")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onOpenFile={handleOpenFile}
+        onDeleteFile={handleDeleteFile}
+      />
 
       <Box ref={blocklyDiv} flex={1} style={{ minHeight: 0 }} />
     </Box>

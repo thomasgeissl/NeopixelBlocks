@@ -28,6 +28,7 @@ export type AppState = {
   ip: string | null;
   showSettings: boolean;
   showPreview: boolean;
+  showSchool: boolean;
   isExecuting: boolean;
   isRunning: boolean;
   files: File[];
@@ -37,11 +38,13 @@ export type AppState = {
   connectionStatus: "connected" | "disconnected" | "checking" | "unknown";
   pingIntervalId?: number | null;
 
+
   init: () => void;
   setIp: (ip: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowPreview: (show: boolean) => void;
   toggleShowSettings: () => void;
+  toggleShowSchool: () => void;
   setIsExecuting: (executing: boolean) => void;
   toggleIsExecuting: () => void;
 
@@ -82,6 +85,7 @@ const useAppStore = create<AppState>()(
         ip: "",
         showSettings: false,
         showPreview: false,
+        showSchool: false,
         isExecuting: false,
         isRunning: false,
         files: [
@@ -125,6 +129,7 @@ const useAppStore = create<AppState>()(
         setShowSettings: (show) => set({ showSettings: show }),
         setShowPreview: (show) => set({ showPreview: show }),
         toggleShowSettings: () => set({ showSettings: !get().showSettings }),
+        toggleShowSchool: () => set({ showSchool: !get().showSchool }),
         setIsExecuting: (executing) => set({ isExecuting: executing }),
         toggleIsExecuting: () => set({ isExecuting: !get().isExecuting }),
 
