@@ -1,6 +1,5 @@
 import * as React from "react";
 import useAppStore from "../stores/app";
-import TextField from "@mui/material/TextField";
 import { Dialog, DialogContent, DialogTitle, Tabs, Tab, Box, Slider, Typography, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
@@ -33,9 +32,9 @@ const School: React.FC = () => {
   const [r, setR] = React.useState(255);
   const [g, setG] = React.useState(128);
   const [b, setB] = React.useState(0);
-  const [layout, setLayout] = React.useState<'line' | 'circle' | 'matrix'>('matrix');
+  const [layout, setLayout] = React.useState<'line' | 'circle' | 'matrix'>('line');
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -49,12 +48,13 @@ const School: React.FC = () => {
       maxWidth="md"
       fullWidth
     >
-      <DialogTitle>{t('information')}</DialogTitle>
+      <DialogTitle>{t('settings')}</DialogTitle>
       <DialogContent sx={{ paddingTop: 2 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="rgb and neopixel tabs">
             <Tab label="RGB Colors" id="tab-0" aria-controls="tabpanel-0" />
             <Tab label="NeoPixel Addressing" id="tab-1" aria-controls="tabpanel-1" />
+            <Tab label="Electronics" id="tab-2" aria-controls="tabpanel-2" />
           </Tabs>
         </Box>
 
@@ -94,7 +94,7 @@ const School: React.FC = () => {
             </Typography>
             <Slider
               value={r}
-              onChange={(e, val) => setR(val as number)}
+              onChange={(_, val) => setR(val as number)}
               min={0}
               max={255}
               sx={{ color: 'error.main' }}
@@ -105,7 +105,7 @@ const School: React.FC = () => {
             </Typography>
             <Slider
               value={g}
-              onChange={(e, val) => setG(val as number)}
+              onChange={(_, val) => setG(val as number)}
               min={0}
               max={255}
               sx={{ color: 'success.main' }}
@@ -116,7 +116,7 @@ const School: React.FC = () => {
             </Typography>
             <Slider
               value={b}
-              onChange={(e, val) => setB(val as number)}
+              onChange={(_, val) => setB(val as number)}
               min={0}
               max={255}
               sx={{ color: 'primary.main' }}
@@ -314,6 +314,54 @@ const School: React.FC = () => {
             </Typography>
             <Typography component="li" variant="body2" paragraph>
               <strong>Order matters:</strong> You must send colors in the right order
+            </Typography>
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          <Typography variant="body1" gutterBottom>
+            To make NeoPixels work safely and reliably, you need two important components: a resistor and a capacitor.
+          </Typography>
+
+          <Box sx={{ mt: 4, p: 2, bgcolor: 'warning.light', borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              330Ω Resistor on Data Line
+            </Typography>
+            <Typography variant="body2" paragraph>
+              <strong>Why?</strong> The resistor protects the data signal. It prevents damage from voltage spikes and makes the signal cleaner.
+            </Typography>
+            <Typography variant="body2">
+              Place a 330Ω (ohm) resistor between your controller's data pin and the first NeoPixel's data input (DIN).
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Capacitor on Power Line
+            </Typography>
+            <Typography variant="body2" paragraph>
+              <strong>Why?</strong> The capacitor smooths out the power supply. NeoPixels use bursts of power when they change colors, and the capacitor helps provide stable electricity.
+            </Typography>
+            <Typography variant="body2">
+              Use a 1000µF (microfarad) capacitor connected between the +5V and GND (ground) near your NeoPixels. Make sure the + leg connects to +5V and the - leg to GND!
+            </Typography>
+          </Box>
+
+          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+            Safety Tips
+          </Typography>
+          <Box component="ul" sx={{ pl: 3 }}>
+            <Typography component="li" variant="body2" paragraph>
+              <strong>Always use these components:</strong> They protect your NeoPixels and controller
+            </Typography>
+            <Typography component="li" variant="body2" paragraph>
+              <strong>Capacitor polarity:</strong> The capacitor has a + and - side. Connect them correctly!
+            </Typography>
+            <Typography component="li" variant="body2" paragraph>
+              <strong>Power first:</strong> Connect power to the NeoPixels before sending data signals
+            </Typography>
+            <Typography component="li" variant="body2" paragraph>
+              <strong>Don't skip:</strong> Even for small projects, these components are important
             </Typography>
           </Box>
         </TabPanel>

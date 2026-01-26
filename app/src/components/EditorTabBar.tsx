@@ -14,7 +14,7 @@ import {
   TextField,
   Button,
 } from "@mui/material";
-import { Close, Add, FolderOpen, MoreVert } from "@mui/icons-material";
+import { Add, FolderOpen, MoreVert } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import useAppStore from "../stores/app";
 
@@ -61,10 +61,6 @@ const EditorTabBar = ({
   } | null>(null);
   const [newName, setNewName] = useState("");
 
-  const handleCloseTab = (tabId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    onCloseTab(tabId);
-  };
 
   const handleOpenMenu = (
     event: React.MouseEvent<HTMLElement>,
