@@ -64,8 +64,8 @@ const School: React.FC = () => {
           </Tabs>
         </Box>
 
-        <LedAddressing tabValue={tabValue} index={0} />
-        <RgbColors tabValue={tabValue} index={1} />
+        <RgbColors tabValue={tabValue} index={0} />
+        <LedAddressing tabValue={tabValue} index={1} />
         <Programming tabValue={tabValue} index={2} />
         <Electronics tabValue={tabValue} index={3} />
         <SystemArchitecture tabValue={tabValue} index={4} />
