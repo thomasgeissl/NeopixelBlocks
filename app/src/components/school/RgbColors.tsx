@@ -1,6 +1,7 @@
 import { Box, Button, Slider, Typography } from "@mui/material";
 import TabPanel from "./TabPanel";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const RgbColors = ({
   tabValue,
@@ -9,6 +10,7 @@ const RgbColors = ({
   tabValue: number;
   index: number;
 }) => {
+  const { t } = useTranslation();
   const [r, setR] = useState(255);
   const [g, setG] = useState(128);
   const [b, setB] = useState(0);
@@ -19,13 +21,12 @@ const RgbColors = ({
     <TabPanel value={tabValue} index={index}>
       <Typography variant="body1" gutterBottom></Typography>
       <Typography variant="body1" gutterBottom>
-        Mix red, green, and blue light to make any color! Each color can be from
-        0 (off) to 255 (brightest).
+        {t("rgbRange")}
       </Typography>
 
       <Box sx={{ mt: 3, display: "flex", gap: 1, flexWrap: "wrap" }}>
         <Typography variant="subtitle2" sx={{ width: "100%", mb: 1 }}>
-          Try these colors:
+          {t("rgbPresetColors")}:
         </Typography>
         <Button
           variant="outlined"
@@ -36,7 +37,7 @@ const RgbColors = ({
             setB(0);
           }}
         >
-          Orange
+          {t("orange")}:
         </Button>
         <Button
           variant="outlined"
@@ -47,7 +48,7 @@ const RgbColors = ({
             setB(128);
           }}
         >
-          Purple
+          {t("purple")}
         </Button>
         <Button
           variant="outlined"
@@ -58,7 +59,7 @@ const RgbColors = ({
             setB(0);
           }}
         >
-          Yellow
+          {t("yellow")}
         </Button>
         <Button
           variant="outlined"
@@ -69,7 +70,7 @@ const RgbColors = ({
             setB(255);
           }}
         >
-          Cyan
+          {t("cyan")}
         </Button>
         <Button
           variant="outlined"
@@ -80,7 +81,7 @@ const RgbColors = ({
             setB(203);
           }}
         >
-          Pink
+          {t("pink")}
         </Button>
         <Button
           variant="outlined"
@@ -91,7 +92,7 @@ const RgbColors = ({
             setB(255);
           }}
         >
-          White
+          {t("white")}
         </Button>
         <Button
           variant="outlined"
@@ -102,13 +103,13 @@ const RgbColors = ({
             setB(0);
           }}
         >
-          Black
+          {t("black")}
         </Button>
       </Box>
 
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" color="error" gutterBottom>
-          Red: {r}
+          {t("red")}: {r}
         </Typography>
         <Slider
           value={r}
@@ -124,7 +125,7 @@ const RgbColors = ({
           gutterBottom
           sx={{ mt: 3 }}
         >
-          Green: {g}
+          {t("green")}: {g}
         </Typography>
         <Slider
           value={g}
@@ -135,7 +136,7 @@ const RgbColors = ({
         />
 
         <Typography variant="h6" color="primary" gutterBottom sx={{ mt: 3 }}>
-          Blue: {b}
+          {t("blue")}: {b}
         </Typography>
         <Slider
           value={b}
