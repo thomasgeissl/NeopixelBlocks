@@ -57,6 +57,7 @@ const BlocklyEditor = () => {
   const resetSimulator = useAppStore((state) => state.resetSimulator);
   const setSimulatorPixelColor = useAppStore((state) => state.setSimulatorPixelColor);
   const setSimulatorColor = useAppStore((state) => state.setSimulatorColor);
+  const simulatorShow = useAppStore((state) => state.simulatorShow);
   const clearSimulator = useAppStore((state) => state.clearSimulator);
   const simulatorRunRequested = useAppStore((state) => state.simulatorRunRequested);
   const simulatorStopRequested = useAppStore((state) => state.simulatorStopRequested);
@@ -282,7 +283,7 @@ const BlocklyEditor = () => {
         },
         show: async () => {
           if (shouldStopRef.current) throw new Error("Stopped by user");
-          // No-op in simulator; store updates already trigger re-render
+          simulatorShow();
         },
         delay,
       };

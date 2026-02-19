@@ -48,10 +48,11 @@ export type AppState = {
   connectionStatus: "connected" | "disconnected" | "checking" | "unknown";
   pingIntervalId?: number | null;
 
-  // Simulator: list of layout configs, active one, and LED buffer
+  // Simulator: list of layout configs, active one, displayed LEDs and pending buffer (only shown after show())
   simulatorLayouts: SimulatorLayoutConfig[];
   activeSimulatorLayoutId: string | null;
   simulatorLeds: Array<{ r: number; g: number; b: number }>;
+  simulatorLedsPending: Array<{ r: number; g: number; b: number }>;
 
   init: () => void;
   setIp: (ip: string | null) => void;
@@ -64,6 +65,7 @@ export type AppState = {
   setActiveSimulatorLayout: (id: string | null) => void;
   setSimulatorPixelColor: (index: number, r: number, g: number, b: number) => void;
   setSimulatorColor: (r: number, g: number, b: number) => void;
+  simulatorShow: () => void;
   clearSimulator: () => void;
   resetSimulator: () => void;
   requestSimulatorRun: () => void;
@@ -148,6 +150,9 @@ const useAppStore = create<AppState>()(
         simulatorLeds: Array(64)
           .fill(null)
           .map(() => ({ r: 0, g: 0, b: 0 })),
+        simulatorLedsPending: Array(64)
+          .fill(null)
+          .map(() => ({ r: 0, g: 0, b: 0 })),
 
         init: () => {
           const ip = get().ip;
@@ -215,29 +220,33 @@ const useAppStore = create<AppState>()(
           get().resetSimulator();
         },
         setSimulatorPixelColor: (index, r, g, b) => {
-          const { simulatorLeds } = get();
+          const { simulatorLedsPending } = get();
           const layout = get().getActiveSimulatorLayout();
           const pixelCount = layout?.pixelCount ?? 64;
           if (index < 0 || index >= pixelCount) return;
-          const next = [...simulatorLeds];
+          const next = [...simulatorLedsPending];
           if (!next[index]) next[index] = { r: 0, g: 0, b: 0 };
           next[index] = { r, g, b };
-          set({ simulatorLeds: next });
+          set({ simulatorLedsPending: next });
         },
         setSimulatorColor: (r, g, b) => {
           const layout = get().getActiveSimulatorLayout();
           const pixelCount = layout?.pixelCount ?? 64;
           set({
-            simulatorLeds: Array(pixelCount)
+            simulatorLedsPending: Array(pixelCount)
               .fill(null)
               .map(() => ({ r, g, b })),
           });
+        },
+        simulatorShow: () => {
+          const { simulatorLedsPending } = get();
+          set({ simulatorLeds: [...simulatorLedsPending] });
         },
         clearSimulator: () => {
           const layout = get().getActiveSimulatorLayout();
           const pixelCount = layout?.pixelCount ?? 64;
           set({
-            simulatorLeds: Array(pixelCount)
+            simulatorLedsPending: Array(pixelCount)
               .fill(null)
               .map(() => ({ r: 0, g: 0, b: 0 })),
           });
@@ -245,10 +254,13 @@ const useAppStore = create<AppState>()(
         resetSimulator: () => {
           const layout = get().getActiveSimulatorLayout();
           const pixelCount = layout?.pixelCount ?? 64;
-          set({
-            simulatorLeds: Array(pixelCount)
+          const blank = () =>
+            Array(pixelCount)
               .fill(null)
-              .map(() => ({ r: 0, g: 0, b: 0 })),
+              .map(() => ({ r: 0, g: 0, b: 0 }));
+          set({
+            simulatorLeds: blank(),
+            simulatorLedsPending: blank(),
           });
         },
         requestSimulatorRun: () => set((s) => ({ simulatorRunRequested: s.simulatorRunRequested + 1 })),
@@ -525,9 +537,20 @@ const useAppStore = create<AppState>()(
       }),
       {
         name: "app-storage",
-        version: 7,
+        version: 8,
         migrate: (persistedState: any, version: number) => {
           const s = persistedState as any;
+          // v7 -> v8: simulator only updates display on show() - add pending buffer
+          if (version < 8) {
+            const leds = s.simulatorLeds;
+            const len = Array.isArray(leds) ? leds.length : 64;
+            s.simulatorLedsPending =
+              Array.isArray(leds) && len > 0
+                ? leds.map((p: { r: number; g: number; b: number }) => ({ ...p }))
+                : Array(len)
+                    .fill(null)
+                    .map(() => ({ r: 0, g: 0, b: 0 }));
+          }
           // v4 -> v5: create simulatorLayouts from old simulatorLayout/simulatorPixelCount
           if (version < 5 && s.simulatorLayouts == null) {
             const layout = s.simulatorLayout ?? "matrix";
