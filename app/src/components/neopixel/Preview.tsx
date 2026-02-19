@@ -8,6 +8,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Paper,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import { PlayArrow, Stop as StopIcon } from "@mui/icons-material";
 import useAppStore from "../../stores/app";
@@ -34,6 +41,7 @@ const Preview = () => {
   const requestSimulatorRun = useAppStore((state) => state.requestSimulatorRun);
   const requestSimulatorStop = useAppStore((state) => state.requestSimulatorStop);
   const simulatorLeds = useAppStore((state) => state.simulatorLeds) ?? [];
+  const simulatorVariables = useAppStore((state) => state.simulatorVariables) ?? {};
 
   const activeLayout = getActiveSimulatorLayout();
   const simulatorLayout = activeLayout?.type ?? "matrix";
@@ -295,9 +303,42 @@ const Preview = () => {
             </Select>
           </FormControl>
         </Box>
-        <div className="flex items-center justify-center min-h-[200px] bg-gray-900 p-4">
-          {renderLayout()}
-        </div>
+        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+          <div className="flex items-center justify-center min-h-[200px] bg-gray-900 p-4">
+            {renderLayout()}
+          </div>
+          {Object.keys(simulatorVariables).length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2, minWidth: 180, flexShrink: 0 }}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Variable inspector
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Variable</TableCell>
+                    <TableCell>Value</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Object.entries(simulatorVariables).map(([name, value]) => (
+                    <TableRow key={name}>
+                      <TableCell component="th" scope="row" sx={{ fontFamily: "monospace" }}>
+                        {name}
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: "monospace" }}>
+                        {value === undefined
+                          ? "—"
+                          : typeof value === "object" && value !== null
+                            ? JSON.stringify(value)
+                            : String(value)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          )}
+        </Box>
       </DialogContent>
     </Dialog>
   );

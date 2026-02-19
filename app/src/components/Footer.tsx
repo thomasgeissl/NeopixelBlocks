@@ -1,7 +1,7 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
-import { IconButton, Tooltip, Typography } from "@mui/material";
+import { IconButton, Link, Tooltip, Typography } from "@mui/material";
 import { School, Preview as PreviewIcon } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 
@@ -13,7 +13,10 @@ const Footer: React.FC = () => {
   return (
     <Box display="flex" alignItems="center" p={2}>
       <Typography variant="body2" color="textSecondary">
-        {t("made_with_love")} 3e8
+        {t("made_with_love")}{" "}
+        <Link href="https://3e8.studio" target="_blank">
+          3e8
+        </Link>
       </Typography>
       <Box flex={1}></Box>
       <Tooltip title="Open simulator preview">

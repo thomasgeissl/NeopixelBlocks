@@ -65,6 +65,7 @@ const BlocklyEditor = () => {
   const clearSimulatorStopRequest = useAppStore((state) => state.clearSimulatorStopRequest);
   const run = useAppStore((state) => state.run);
   const stop = useAppStore((state) => state.stop);
+  const setSimulatorVariables = useAppStore((state) => state.setSimulatorVariables);
 
   const handleSimulateRef = useRef<(() => Promise<void>) | null>(null);
 
@@ -244,6 +245,24 @@ const BlocklyEditor = () => {
 
       const code = javascriptGenerator.workspaceToCode(workspace.current!);
 
+      // Collect all variable names: from Blockly workspace and from generated code (e.g. loop vars)
+      const varNamesFromWorkspace =
+        workspace.current!.getVariableMap().getAllVariables().map((v) => v.getName()) ?? [];
+      const varNamesFromCode = [...code.matchAll(/(?:^|\s)(?:var|let|const)\s+(\w+)/g)].map(
+        (m) => m[1],
+      );
+      const allVarNames = Array.from(
+        new Set([...varNamesFromWorkspace, ...varNamesFromCode]),
+      ).filter((n) => !n.startsWith("__")); // exclude our internals
+
+      let syncFnRef: (() => Record<string, unknown>) | null = null;
+      const registerSync = (fn: () => Record<string, unknown>) => {
+        syncFnRef = fn;
+      };
+      const flushVars = () => {
+        if (syncFnRef) setSimulatorVariables(syncFnRef());
+      };
+
       const delay = (ms: number) => {
         return new Promise<void>((resolve, reject) => {
           const checkInterval = 50;
@@ -270,25 +289,37 @@ const BlocklyEditor = () => {
           g: number,
           b: number,
         ) => {
+          flushVars();
           if (shouldStopRef.current) throw new Error("Stopped by user");
           setSimulatorPixelColor(index, r, g, b);
         },
         setAllPixelColor: async (r: number, g: number, b: number) => {
+          flushVars();
           if (shouldStopRef.current) throw new Error("Stopped by user");
           setSimulatorColor(r, g, b);
         },
         clear: async () => {
+          flushVars();
           if (shouldStopRef.current) throw new Error("Stopped by user");
           clearSimulator();
         },
         show: async () => {
+          flushVars();
           if (shouldStopRef.current) throw new Error("Stopped by user");
           simulatorShow();
         },
-        delay,
+        delay: async (ms: number) => {
+          flushVars();
+          await delay(ms);
+        },
       };
 
-      const asyncCode = `(async function() {\n${code}\n})()`;
+      const syncVarsBody =
+        allVarNames.length > 0
+          ? `const __syncVars = () => ({ ${allVarNames.map((n) => `${n}: typeof ${n} !== 'undefined' ? ${n} : undefined`).join(", ")} }); registerSync(__syncVars);\n`
+          : "";
+
+      const asyncCode = `(async function() {\n${syncVarsBody}${code}\n})()`;
 
       await new Function(
         "setPixelColor",
@@ -296,6 +327,7 @@ const BlocklyEditor = () => {
         "clear",
         "show",
         "delay",
+        "registerSync",
         `return ${asyncCode}`,
       )(
         mockFunctions.setPixelColor,
@@ -303,8 +335,10 @@ const BlocklyEditor = () => {
         mockFunctions.clear,
         mockFunctions.show,
         mockFunctions.delay,
+        registerSync,
       );
 
+      flushVars(); // final snapshot
       console.log("Simulation completed");
     } catch (error: any) {
       if (error?.message === "Stopped by user") {

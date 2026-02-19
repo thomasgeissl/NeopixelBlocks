@@ -53,6 +53,8 @@ export type AppState = {
   activeSimulatorLayoutId: string | null;
   simulatorLeds: Array<{ r: number; g: number; b: number }>;
   simulatorLedsPending: Array<{ r: number; g: number; b: number }>;
+  simulatorVariables: Record<string, unknown>;
+  setSimulatorVariables: (v: Record<string, unknown>) => void;
 
   init: () => void;
   setIp: (ip: string | null) => void;
@@ -153,6 +155,8 @@ const useAppStore = create<AppState>()(
         simulatorLedsPending: Array(64)
           .fill(null)
           .map(() => ({ r: 0, g: 0, b: 0 })),
+        simulatorVariables: {},
+        setSimulatorVariables: (v) => set({ simulatorVariables: v }),
 
         init: () => {
           const ip = get().ip;
@@ -261,6 +265,7 @@ const useAppStore = create<AppState>()(
           set({
             simulatorLeds: blank(),
             simulatorLedsPending: blank(),
+            simulatorVariables: {},
           });
         },
         requestSimulatorRun: () => set((s) => ({ simulatorRunRequested: s.simulatorRunRequested + 1 })),
