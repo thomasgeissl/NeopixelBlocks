@@ -23,6 +23,16 @@ export interface Tab {
   fileId: string; // Reference to a file
 }
 
+// Simulator layout and LED state
+export type SimulatorLayout = "line" | "matrix" | "ring";
+
+export interface SimulatorLayoutConfig {
+  id: string;
+  name: string;
+  type: SimulatorLayout;
+  pixelCount: number;
+}
+
 // Store shape with both state and actions
 export type AppState = {
   ip: string | null;
@@ -38,11 +48,24 @@ export type AppState = {
   connectionStatus: "connected" | "disconnected" | "checking" | "unknown";
   pingIntervalId?: number | null;
 
+  // Simulator: list of layout configs, active one, and LED buffer
+  simulatorLayouts: SimulatorLayoutConfig[];
+  activeSimulatorLayoutId: string | null;
+  simulatorLeds: Array<{ r: number; g: number; b: number }>;
 
   init: () => void;
   setIp: (ip: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowPreview: (show: boolean) => void;
+  getActiveSimulatorLayout: () => SimulatorLayoutConfig | undefined;
+  addSimulatorLayout: (config: Omit<SimulatorLayoutConfig, "id">) => string;
+  updateSimulatorLayout: (id: string, config: Partial<Omit<SimulatorLayoutConfig, "id">>) => void;
+  removeSimulatorLayout: (id: string) => void;
+  setActiveSimulatorLayout: (id: string | null) => void;
+  setSimulatorPixelColor: (index: number, r: number, g: number, b: number) => void;
+  setSimulatorColor: (r: number, g: number, b: number) => void;
+  clearSimulator: () => void;
+  resetSimulator: () => void;
   toggleShowSettings: () => void;
   toggleShowSchool: () => void;
   setIsExecuting: (executing: boolean) => void;
@@ -107,6 +130,17 @@ const useAppStore = create<AppState>()(
         activeTabId: null,
         connectionStatus: "unknown",
 
+        simulatorLayouts: [
+          { id: "default-matrix", name: "8×8 Matrix", type: "matrix", pixelCount: 64 },
+          { id: "default-matrix-5x5", name: "5×5 Matrix", type: "matrix", pixelCount: 25 },
+          { id: "default-strip", name: "Strip 30", type: "line", pixelCount: 30 },
+          { id: "default-ring", name: "Ring 24", type: "ring", pixelCount: 24 },
+        ],
+        activeSimulatorLayoutId: "default-matrix",
+        simulatorLeds: Array(64)
+          .fill(null)
+          .map(() => ({ r: 0, g: 0, b: 0 })),
+
         init: () => {
           const ip = get().ip;
           if (ip) {
@@ -128,6 +162,87 @@ const useAppStore = create<AppState>()(
         },
         setShowSettings: (show) => set({ showSettings: show }),
         setShowPreview: (show) => set({ showPreview: show }),
+        getActiveSimulatorLayout: () => {
+          const { simulatorLayouts, activeSimulatorLayoutId } = get();
+          if (!simulatorLayouts?.length) return undefined;
+          if (activeSimulatorLayoutId) {
+            const found = simulatorLayouts.find((l) => l.id === activeSimulatorLayoutId);
+            if (found) return found;
+          }
+          return simulatorLayouts[0];
+        },
+        addSimulatorLayout: (config) => {
+          const id = uuidv4();
+          const layout: SimulatorLayoutConfig = { ...config, id };
+          const pixelCount = Math.max(1, Math.min(512, config.pixelCount));
+          layout.pixelCount = pixelCount;
+          set({ simulatorLayouts: [...(get().simulatorLayouts || []), layout] });
+          get().resetSimulator();
+          return id;
+        },
+        updateSimulatorLayout: (id, updates) => {
+          const { simulatorLayouts } = get();
+          const idx = simulatorLayouts.findIndex((l) => l.id === id);
+          if (idx === -1) return;
+          const next = [...simulatorLayouts];
+          next[idx] = { ...next[idx], ...updates };
+          if (typeof updates.pixelCount === "number") {
+            next[idx].pixelCount = Math.max(1, Math.min(512, updates.pixelCount));
+          }
+          set({ simulatorLayouts: next });
+          get().resetSimulator();
+        },
+        removeSimulatorLayout: (id) => {
+          const { simulatorLayouts, activeSimulatorLayoutId } = get();
+          const next = simulatorLayouts.filter((l) => l.id !== id);
+          let newActive = activeSimulatorLayoutId;
+          if (activeSimulatorLayoutId === id) {
+            newActive = next.length ? next[0].id : null;
+          }
+          set({ simulatorLayouts: next, activeSimulatorLayoutId: newActive });
+          get().resetSimulator();
+        },
+        setActiveSimulatorLayout: (id) => {
+          set({ activeSimulatorLayoutId: id });
+          get().resetSimulator();
+        },
+        setSimulatorPixelColor: (index, r, g, b) => {
+          const { simulatorLeds } = get();
+          const layout = get().getActiveSimulatorLayout();
+          const pixelCount = layout?.pixelCount ?? 64;
+          if (index < 0 || index >= pixelCount) return;
+          const next = [...simulatorLeds];
+          if (!next[index]) next[index] = { r: 0, g: 0, b: 0 };
+          next[index] = { r, g, b };
+          set({ simulatorLeds: next });
+        },
+        setSimulatorColor: (r, g, b) => {
+          const layout = get().getActiveSimulatorLayout();
+          const pixelCount = layout?.pixelCount ?? 64;
+          set({
+            simulatorLeds: Array(pixelCount)
+              .fill(null)
+              .map(() => ({ r, g, b })),
+          });
+        },
+        clearSimulator: () => {
+          const layout = get().getActiveSimulatorLayout();
+          const pixelCount = layout?.pixelCount ?? 64;
+          set({
+            simulatorLeds: Array(pixelCount)
+              .fill(null)
+              .map(() => ({ r: 0, g: 0, b: 0 })),
+          });
+        },
+        resetSimulator: () => {
+          const layout = get().getActiveSimulatorLayout();
+          const pixelCount = layout?.pixelCount ?? 64;
+          set({
+            simulatorLeds: Array(pixelCount)
+              .fill(null)
+              .map(() => ({ r: 0, g: 0, b: 0 })),
+          });
+        },
         toggleShowSettings: () => set({ showSettings: !get().showSettings }),
         toggleShowSchool: () => set({ showSchool: !get().showSchool }),
         setIsExecuting: (executing) => set({ isExecuting: executing }),
@@ -398,7 +513,36 @@ const useAppStore = create<AppState>()(
       }),
       {
         name: "app-storage",
-        version: 4, // Increment version due to schema change
+        version: 6,
+        migrate: (persistedState: any, version: number) => {
+          const s = persistedState as any;
+          // v4 -> v5: create simulatorLayouts from old simulatorLayout/simulatorPixelCount
+          if (version < 5 && s.simulatorLayouts == null) {
+            const layout = s.simulatorLayout ?? "matrix";
+            const pixelCount = Math.max(1, Math.min(512, s.simulatorPixelCount ?? 64));
+            const id = "migrated-" + (s.simulatorLayout ?? "matrix");
+            s.simulatorLayouts = [
+              { id, name: `${layout} ${pixelCount}`, type: layout, pixelCount },
+              { id: "default-matrix", name: "8×8 Matrix", type: "matrix", pixelCount: 64 },
+              { id: "default-strip", name: "Strip 30", type: "line", pixelCount: 30 },
+              { id: "default-ring", name: "Ring 24", type: "ring", pixelCount: 24 },
+            ].filter((l: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === l.id) === i);
+            s.activeSimulatorLayoutId = id;
+            delete s.simulatorLayout;
+            delete s.simulatorPixelCount;
+          }
+          // v5 -> v6: add 5×5 Matrix if missing
+          if (version < 6 && Array.isArray(s.simulatorLayouts)) {
+            const has5x5 = s.simulatorLayouts.some((l: any) => l.id === "default-matrix-5x5");
+            if (!has5x5) {
+              s.simulatorLayouts = [
+                ...s.simulatorLayouts,
+                { id: "default-matrix-5x5", name: "5×5 Matrix", type: "matrix", pixelCount: 25 },
+              ];
+            }
+          }
+          return s;
+        },
       },
     ),
     { name: "useAppStore" },

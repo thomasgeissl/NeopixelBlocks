@@ -17,6 +17,7 @@ import {
   Stop,
   Circle,
   UploadFile,
+  PlayCircleOutline,
 } from "@mui/icons-material";
 import useAppStore from "../stores/app";
 import { useTranslation } from "react-i18next";
@@ -52,6 +53,11 @@ const BlocklyEditor = () => {
   const reconnect = useAppStore((state) => state.reconnect);
   const init = useAppStore((state) => state.init);
   const doPing = useAppStore((state) => state.doPing);
+  const setShowPreview = useAppStore((state) => state.setShowPreview);
+  const resetSimulator = useAppStore((state) => state.resetSimulator);
+  const setSimulatorPixelColor = useAppStore((state) => state.setSimulatorPixelColor);
+  const setSimulatorColor = useAppStore((state) => state.setSimulatorColor);
+  const clearSimulator = useAppStore((state) => state.clearSimulator);
 
   // Initialize Blockly workspace
   useEffect(() => {
@@ -217,6 +223,88 @@ const BlocklyEditor = () => {
     }
   };
 
+  const handleSimulate = async () => {
+    try {
+      shouldStopRef.current = false;
+      setIsRunning(true);
+      resetSimulator();
+      setShowPreview(true);
+
+      const code = javascriptGenerator.workspaceToCode(workspace.current!);
+
+      const delay = (ms: number) => {
+        return new Promise<void>((resolve, reject) => {
+          const checkInterval = 50;
+          let elapsed = 0;
+          const interval = setInterval(() => {
+            if (shouldStopRef.current) {
+              clearInterval(interval);
+              reject(new Error("Stopped by user"));
+              return;
+            }
+            elapsed += checkInterval;
+            if (elapsed >= ms) {
+              clearInterval(interval);
+              resolve();
+            }
+          }, checkInterval);
+        });
+      };
+
+      const mockFunctions = {
+        setPixelColor: async (
+          index: number,
+          r: number,
+          g: number,
+          b: number,
+        ) => {
+          if (shouldStopRef.current) throw new Error("Stopped by user");
+          setSimulatorPixelColor(index, r, g, b);
+        },
+        setAllPixelColor: async (r: number, g: number, b: number) => {
+          if (shouldStopRef.current) throw new Error("Stopped by user");
+          setSimulatorColor(r, g, b);
+        },
+        clear: async () => {
+          if (shouldStopRef.current) throw new Error("Stopped by user");
+          clearSimulator();
+        },
+        show: async () => {
+          if (shouldStopRef.current) throw new Error("Stopped by user");
+          // No-op in simulator; store updates already trigger re-render
+        },
+        delay,
+      };
+
+      const asyncCode = `(async function() {\n${code}\n})()`;
+
+      await new Function(
+        "setPixelColor",
+        "setColor",
+        "clear",
+        "show",
+        "delay",
+        `return ${asyncCode}`,
+      )(
+        mockFunctions.setPixelColor,
+        mockFunctions.setAllPixelColor,
+        mockFunctions.clear,
+        mockFunctions.show,
+        mockFunctions.delay,
+      );
+
+      console.log("Simulation completed");
+    } catch (error: any) {
+      if (error?.message === "Stopped by user") {
+        console.log("Simulation stopped by user");
+      } else {
+        console.error("Simulation error:", error);
+      }
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   const handleUpload = async () => {
     try {
       // Enable upload mode for synchronous code generation
@@ -345,7 +433,20 @@ const BlocklyEditor = () => {
       <Box display="flex" alignItems="center" gap={1}>
         <Box display="flex" alignItems="center" gap={1}>
           {!isRunning && (
-            <Tooltip title="Run code">
+            <Tooltip title="Run in simulator (no device needed)">
+              <Button
+                onClick={handleSimulate}
+                color="secondary"
+                disabled={isRunning}
+                startIcon={<PlayCircleOutline />}
+                variant="outlined"
+              >
+                {t("simulate")}
+              </Button>
+            </Tooltip>
+          )}
+          {!isRunning && (
+            <Tooltip title="Run on device">
               <Button
                 onClick={handleRun}
                 color="primary"
@@ -362,7 +463,6 @@ const BlocklyEditor = () => {
               <Button
                 onClick={handleStop}
                 color="error"
-                disabled={connectionStatus !== "connected"}
                 startIcon={<Stop />}
                 variant="outlined"
               >

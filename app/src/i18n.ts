@@ -6,6 +6,7 @@ i18n.use(initReactI18next).init({
     en: {
       translation: {
         run: "run",
+        simulate: "simulate",
         stop: "stop",
         upload: "upload",
         cancel: "cancel",
@@ -22,6 +23,7 @@ i18n.use(initReactI18next).init({
     de: {
       translation: {
         run: "ausführen",
+        simulate: "simulieren",
         stop: "anhalten",
         upload: "hochladen",
         cancel: "abbrechen",
@@ -38,6 +40,7 @@ i18n.use(initReactI18next).init({
     es: {
       translation: {
         run: "ejecutar",
+        simulate: "simular",
         stop: "detener",
         upload: "subir",
         cancel: "cancelar",
