@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "install:safe": "NODE_OPTIONS=--max-old-space-size=4096 npm install",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -45,6 +46,7 @@
     "vite-plugin-pwa": "^1.1.0"
   },
   "overrides": {
-    "vite": "npm:rolldown-vite@7.1.14"
+    "vite": "npm:rolldown-vite@7.1.14",
+    "sourcemap-codec": "npm:@jridgewell/sourcemap-codec@^1.5.0"
   }
 }
