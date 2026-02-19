@@ -58,6 +58,14 @@ const BlocklyEditor = () => {
   const setSimulatorPixelColor = useAppStore((state) => state.setSimulatorPixelColor);
   const setSimulatorColor = useAppStore((state) => state.setSimulatorColor);
   const clearSimulator = useAppStore((state) => state.clearSimulator);
+  const simulatorRunRequested = useAppStore((state) => state.simulatorRunRequested);
+  const simulatorStopRequested = useAppStore((state) => state.simulatorStopRequested);
+  const clearSimulatorRunRequest = useAppStore((state) => state.clearSimulatorRunRequest);
+  const clearSimulatorStopRequest = useAppStore((state) => state.clearSimulatorStopRequest);
+  const run = useAppStore((state) => state.run);
+  const stop = useAppStore((state) => state.stop);
+
+  const handleSimulateRef = useRef<(() => Promise<void>) | null>(null);
 
   // Initialize Blockly workspace
   useEffect(() => {
@@ -137,6 +145,7 @@ const BlocklyEditor = () => {
     try {
       shouldStopRef.current = false;
       setIsRunning(true);
+      run();
 
       const code = javascriptGenerator.workspaceToCode(workspace.current!);
       console.log(code);
@@ -220,6 +229,7 @@ const BlocklyEditor = () => {
       }
     } finally {
       setIsRunning(false);
+      stop();
     }
   };
 
@@ -227,6 +237,7 @@ const BlocklyEditor = () => {
     try {
       shouldStopRef.current = false;
       setIsRunning(true);
+      run();
       resetSimulator();
       setShowPreview(true);
 
@@ -302,8 +313,25 @@ const BlocklyEditor = () => {
       }
     } finally {
       setIsRunning(false);
+      stop();
     }
   };
+
+  handleSimulateRef.current = handleSimulate;
+
+  useEffect(() => {
+    if (simulatorRunRequested > 0 && !isRunning) {
+      clearSimulatorRunRequest();
+      handleSimulateRef.current?.();
+    }
+  }, [simulatorRunRequested, isRunning, clearSimulatorRunRequest]);
+
+  useEffect(() => {
+    if (simulatorStopRequested > 0) {
+      clearSimulatorStopRequest();
+      shouldStopRef.current = true;
+    }
+  }, [simulatorStopRequested, clearSimulatorStopRequest]);
 
   const handleUpload = async () => {
     try {

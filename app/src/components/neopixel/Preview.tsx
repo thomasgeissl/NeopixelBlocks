@@ -3,11 +3,13 @@ import {
   DialogContent,
   DialogTitle,
   Box,
+  Button,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
 } from "@mui/material";
+import { PlayArrow, Stop as StopIcon } from "@mui/icons-material";
 import useAppStore from "../../stores/app";
 const defaultLed = { r: 0, g: 0, b: 0 };
 
@@ -28,6 +30,9 @@ const Preview = () => {
   const simulatorLayouts = useAppStore((state) => state.simulatorLayouts) ?? [];
   const activeSimulatorLayoutId = useAppStore((state) => state.activeSimulatorLayoutId);
   const setActiveSimulatorLayout = useAppStore((state) => state.setActiveSimulatorLayout);
+  const isRunning = useAppStore((state) => state.isRunning);
+  const requestSimulatorRun = useAppStore((state) => state.requestSimulatorRun);
+  const requestSimulatorStop = useAppStore((state) => state.requestSimulatorStop);
   const simulatorLeds = useAppStore((state) => state.simulatorLeds) ?? [];
 
   const activeLayout = getActiveSimulatorLayout();
@@ -253,6 +258,27 @@ const Preview = () => {
       <DialogTitle>Simulator</DialogTitle>
       <DialogContent sx={{ paddingTop: 2 }}>
         <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          {!isRunning ? (
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<PlayArrow />}
+              onClick={() => requestSimulatorRun()}
+            >
+              Run
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<StopIcon />}
+              onClick={() => requestSimulatorStop()}
+            >
+              Stop
+            </Button>
+          )}
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel id="preview-choose-layout">Choose layout</InputLabel>
             <Select

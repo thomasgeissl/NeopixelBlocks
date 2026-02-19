@@ -66,6 +66,10 @@ export type AppState = {
   setSimulatorColor: (r: number, g: number, b: number) => void;
   clearSimulator: () => void;
   resetSimulator: () => void;
+  requestSimulatorRun: () => void;
+  requestSimulatorStop: () => void;
+  clearSimulatorRunRequest: () => void;
+  clearSimulatorStopRequest: () => void;
   toggleShowSettings: () => void;
   toggleShowSchool: () => void;
   setIsExecuting: (executing: boolean) => void;
@@ -74,6 +78,8 @@ export type AppState = {
   // Run/Stop control
   run: () => void;
   stop: () => void;
+  simulatorRunRequested: number;
+  simulatorStopRequested: number;
   reconnect: () => void;
 
   doPing: () => void;
@@ -129,6 +135,8 @@ const useAppStore = create<AppState>()(
         tabs: [],
         activeTabId: null,
         connectionStatus: "unknown",
+        simulatorRunRequested: 0,
+        simulatorStopRequested: 0,
 
         simulatorLayouts: [
           { id: "default-matrix", name: "8×8 Matrix", type: "matrix", pixelCount: 64 },
@@ -243,6 +251,10 @@ const useAppStore = create<AppState>()(
               .map(() => ({ r: 0, g: 0, b: 0 })),
           });
         },
+        requestSimulatorRun: () => set((s) => ({ simulatorRunRequested: s.simulatorRunRequested + 1 })),
+        requestSimulatorStop: () => set((s) => ({ simulatorStopRequested: s.simulatorStopRequested + 1 })),
+        clearSimulatorRunRequest: () => set({ simulatorRunRequested: 0 }),
+        clearSimulatorStopRequest: () => set({ simulatorStopRequested: 0 }),
         toggleShowSettings: () => set({ showSettings: !get().showSettings }),
         toggleShowSchool: () => set({ showSchool: !get().showSchool }),
         setIsExecuting: (executing) => set({ isExecuting: executing }),
@@ -513,7 +525,7 @@ const useAppStore = create<AppState>()(
       }),
       {
         name: "app-storage",
-        version: 6,
+        version: 7,
         migrate: (persistedState: any, version: number) => {
           const s = persistedState as any;
           // v4 -> v5: create simulatorLayouts from old simulatorLayout/simulatorPixelCount
@@ -540,6 +552,11 @@ const useAppStore = create<AppState>()(
                 { id: "default-matrix-5x5", name: "5×5 Matrix", type: "matrix", pixelCount: 25 },
               ];
             }
+          }
+          // v6 -> v7: add simulator run/stop request counters
+          if (version < 7) {
+            if (s.simulatorRunRequested === undefined) s.simulatorRunRequested = 0;
+            if (s.simulatorStopRequested === undefined) s.simulatorStopRequested = 0;
           }
           return s;
         },
