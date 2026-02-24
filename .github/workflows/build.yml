@@ -131,6 +131,7 @@ jobs:
             app/src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
 
   build-ios:
+    if: false  # set to true to re-enable iOS build
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -160,7 +161,7 @@ jobs:
       
       - name: Build iOS app (development)
         working-directory: app
-        run: npm run tauri:ios:build -- --no-sign
+        run: npm run tauri:ios:build
       
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
