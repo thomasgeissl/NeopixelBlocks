@@ -10,12 +10,16 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "serve": "npm run build && npx http-serve dist -p 80",
+    "tauri": "tauri",
     "tauri:dev": "npx tauri dev",
     "tauri:build": "npx tauri build",
+    "tauri:build:release": "npm run tauri:build && sh scripts/resign-macos.sh",
     "tauri:android:init": "npx tauri android init",
     "tauri:android:build": "tauri android build",
-    "tauri:ios:init": "npx tauri ios init",
-    "tauri:ios:build": "npx tauri ios build"
+    "tauri:ios:check": "node -e \"try{require('child_process').execSync('which pod',{stdio:'pipe'});}catch(e){console.error('\\nCocoaPods (pod) is required for Tauri iOS. Install it first:\\n  brew install cocoapods\\nor\\n  sudo gem install cocoapods\\n');process.exit(1);}\"",
+    "tauri:ios:init": "npm run tauri:ios:check && npx tauri ios init",
+    "tauri:ios:build": "npx tauri ios build",
+    "notarize": "sh scripts/notarize.sh"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
