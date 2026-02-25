@@ -1,0 +1,91 @@
+# Build Linux packages (.deb + AppImage). Run manually or on tag.
+# .deb = Debian/Ubuntu; AppImage = portable, works on most distros.
+# Optional: Add code signing (see Tauri docs) for verified installs.
+
+name: Release Linux
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Write version file and update app config
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "$VERSION" > app/version.txt
+          sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" app/package.json && rm -f app/package.json.bak
+          sed -i.bak "s/\"version\":\"[^\"]*\"/\"version\":\"$VERSION\"/" app/src-tauri/tauri.conf.json && rm -f app/src-tauri/tauri.conf.json.bak
+          sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" app/src-tauri/Cargo.toml && rm -f app/src-tauri/Cargo.toml.bak
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Build (Tauri)
+        working-directory: app
+        run: npm run tauri build
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build-${{ steps.version.outputs.version }}
+          path: |
+            app/src-tauri/target/release/bundle/deb/*.deb
+            app/src-tauri/target/release/bundle/appimage/*.AppImage
+            app/version.txt
+
+      - name: Create Release and upload assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: |
+            app/src-tauri/target/release/bundle/deb/*.deb
+            app/src-tauri/target/release/bundle/appimage/*.AppImage
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
