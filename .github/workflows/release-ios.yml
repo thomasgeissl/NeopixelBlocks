@@ -12,6 +12,7 @@ on:
 
 jobs:
   release-ios:
+    if: false  # set to true to re-enable iOS release
     runs-on: macos-latest
     steps:
       - name: Checkout repository

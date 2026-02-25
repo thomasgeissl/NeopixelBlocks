@@ -14,6 +14,8 @@ on:
 jobs:
   release-macos:
     runs-on: macos-latest
+    permissions:
+      contents: write  # create release and upload assets
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -97,3 +99,21 @@ jobs:
           path: |
             app/src-tauri/target/release/bundle/macos/neopixel-blocks.app
             app/version.txt
+
+      - name: Zip app for release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd app/src-tauri/target/release/bundle/macos
+          zip -r neopixel-blocks-$VERSION-macos-aarch64.zip neopixel-blocks.app
+
+      - name: Create Release and upload asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: app/src-tauri/target/release/bundle/macos/neopixel-blocks-${{ steps.version.outputs.version }}-macos-aarch64.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
