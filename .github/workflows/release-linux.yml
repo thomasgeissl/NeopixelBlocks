@@ -6,6 +6,11 @@ name: Release Linux
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (required when running manually; e.g. 0.0.4)'
+        required: true
+        default: ''
   push:
     tags:
       - '*'
@@ -19,11 +24,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set version from tag
+      - name: Set version from tag or input
         id: version
         run: |
           if [ "${{ github.ref_type }}" = "tag" ]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
           else
             echo "version=0.0.0" >> $GITHUB_OUTPUT
           fi
@@ -32,8 +39,8 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "$VERSION" > app/version.txt
-          sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" app/package.json && rm -f app/package.json.bak
-          sed -i.bak "s/\"version\":\"[^\"]*\"/\"version\":\"$VERSION\"/" app/src-tauri/tauri.conf.json && rm -f app/src-tauri/tauri.conf.json.bak
+          sed -i.bak "s/\"version\": *\"[^\"]*\"/\"version\": \"$VERSION\"/" app/package.json && rm -f app/package.json.bak
+          sed -i.bak "s/\"version\": *\"[^\"]*\"/\"version\": \"$VERSION\"/" app/src-tauri/tauri.conf.json && rm -f app/src-tauri/tauri.conf.json.bak
           sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" app/src-tauri/Cargo.toml && rm -f app/src-tauri/Cargo.toml.bak
 
       - name: Install Linux dependencies
