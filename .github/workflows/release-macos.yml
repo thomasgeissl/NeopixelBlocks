@@ -23,7 +23,7 @@ jobs:
       - name: Set version from tag
         id: version
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [ "${{ github.ref_type }}" = "tag" ]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             echo "version=0.0.0" >> $GITHUB_OUTPUT
@@ -100,6 +100,13 @@ jobs:
             app/src-tauri/target/release/bundle/macos/neopixel-blocks.app
             app/version.txt
 
+      - name: Tar app bundle for release (uncompressed)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd app/src-tauri/target/release/bundle/macos
+          tar -cf neopixel-blocks-$VERSION-macos-aarch64.app.tar neopixel-blocks.app
+
       - name: Zip app for release
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -107,13 +114,15 @@ jobs:
           cd app/src-tauri/target/release/bundle/macos
           zip -r neopixel-blocks-$VERSION-macos-aarch64.zip neopixel-blocks.app
 
-      - name: Create Release and upload asset
+      - name: Create Release and upload assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          files: app/src-tauri/target/release/bundle/macos/neopixel-blocks-${{ steps.version.outputs.version }}-macos-aarch64.zip
+          files: |
+            app/src-tauri/target/release/bundle/macos/neopixel-blocks-${{ steps.version.outputs.version }}-macos-aarch64.app.tar
+            app/src-tauri/target/release/bundle/macos/neopixel-blocks-${{ steps.version.outputs.version }}-macos-aarch64.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
