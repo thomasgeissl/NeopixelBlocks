@@ -4,11 +4,15 @@ import { useTranslation } from "react-i18next";
 import { IconButton, Link, Tooltip, Typography } from "@mui/material";
 import { School, Preview as PreviewIcon } from "@mui/icons-material";
 import useAppStore from "../stores/app";
+import { isTauri } from "../utils/isTauri";
+import { getPlatform } from "../utils/getPlatform";
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const toggleShowSchool = useAppStore((state) => state.toggleShowSchool);
   const setShowPreview = useAppStore((state) => state.setShowPreview);
+  const runningInTauri = isTauri();
+  const platform = getPlatform();
 
   return (
     <Box display="flex" alignItems="center" p={2}>
@@ -19,6 +23,15 @@ const Footer: React.FC = () => {
         </Link>
       </Typography>
       <Box flex={1}></Box>
+      {!runningInTauri && platform === "other" && (
+        <Link
+          href="https://github.com/thomasgeissl/NeopixelBlocks/releases/latest"
+          target="_blank"
+          sx={{ mr: 2 }}
+        >
+          Download desktop app
+        </Link>
+      )}
       <Tooltip title="Open simulator preview">
         <IconButton onClick={() => setShowPreview(true)}>
           <PreviewIcon />
