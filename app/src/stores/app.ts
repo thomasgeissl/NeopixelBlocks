@@ -39,6 +39,7 @@ export type AppState = {
   showSettings: boolean;
   showPreview: boolean;
   showSchool: boolean;
+  showTools: boolean;
   isExecuting: boolean;
   isRunning: boolean;
   files: File[];
@@ -60,6 +61,7 @@ export type AppState = {
   setIp: (ip: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowPreview: (show: boolean) => void;
+  setShowTools: (show: boolean) => void;
   getActiveSimulatorLayout: () => SimulatorLayoutConfig | undefined;
   addSimulatorLayout: (config: Omit<SimulatorLayoutConfig, "id">) => string;
   updateSimulatorLayout: (id: string, config: Partial<Omit<SimulatorLayoutConfig, "id">>) => void;
@@ -119,6 +121,7 @@ const useAppStore = create<AppState>()(
         showSettings: false,
         showPreview: false,
         showSchool: false,
+        showTools: false,
         isExecuting: false,
         isRunning: false,
         files: [
@@ -179,6 +182,7 @@ const useAppStore = create<AppState>()(
         },
         setShowSettings: (show) => set({ showSettings: show }),
         setShowPreview: (show) => set({ showPreview: show }),
+        setShowTools: (show) => set({ showTools: show }),
         getActiveSimulatorLayout: () => {
           const { simulatorLayouts, activeSimulatorLayoutId } = get();
           if (!simulatorLayouts?.length) return undefined;

@@ -6,11 +6,13 @@ import Settings from "./components/Settings";
 import Footer from "./components/Footer";
 import Preview from "./components/neopixel/Preview";
 import School from "./components/School";
+import Tools from "./components/Tools";
 
 function App() {
   const showSettings = useAppStore((state) => state.showSettings);
   const showPreview = useAppStore((state) => state.showPreview);
   const showSchool = useAppStore((state) => state.showSchool);
+  const showTools = useAppStore((state) => state.showTools);
   return (
     <Box
       display={"flex"}
@@ -24,6 +26,7 @@ function App() {
         {showSettings && <Settings />}
         {showSchool && <School />}
         {showPreview && <Preview />}
+        {showTools && <Tools />}
       </Box>
       <Footer />
     </Box>
